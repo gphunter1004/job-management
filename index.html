@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/robot-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Robot Dashboard - MQTT Bridge Control Panel for monitoring and controlling robots" />
+    <meta name="keywords" content="robot, dashboard, mqtt, control, monitoring, automation" />
+    <meta name="author" content="Robot Dashboard Team" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Robot Dashboard" />
+    <meta property="og:description" content="Advanced robot monitoring and control dashboard" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:url" content="https://robot-dashboard.example.com" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Robot Dashboard" />
+    <meta property="twitter:description" content="Advanced robot monitoring and control dashboard" />
+    <meta property="twitter:image" content="/og-image.png" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Favicon and app icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2563eb" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="theme-color" content="#ffffff" />
+    
+    <!-- Security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    
+    <!-- PWA support -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Robot Dashboard" />
+    
+    <title>Robot Dashboard - MQTT Bridge Control Panel</title>
+  </head>
+  <body>
+    <noscript>
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: #f9fafb;
+        color: #374151;
+        text-align: center;
+        padding: 2rem;
+      ">
+        <div>
+          <h1 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
+            JavaScript Required
+          </h1>
+          <p style="margin-bottom: 1rem;">
+            Robot Dashboard requires JavaScript to function properly.
+          </p>
+          <p style="color: #6b7280; font-size: 0.875rem;">
+            Please enable JavaScript in your browser settings and reload the page.
+          </p>
+        </div>
+      </div>
+    </noscript>
+    
+    <div id="root"></div>
+    
+    <!-- Fallback for users with very old browsers -->
+    <div id="browser-warning" style="display: none;">
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: #fef3c7;
+        color: #92400e;
+        padding: 0.75rem;
+        text-align: center;
+        font-size: 0.875rem;
+        z-index: 9999;
+      ">
+        Your browser may not support all features. For the best experience, please update to a modern browser.
+      </div>
+    </div>
+    
+    <script>
+      // Browser compatibility check
+      if (!window.fetch || !window.Promise || !window.Map || !window.Set) {
+        document.getElementById('browser-warning').style.display = 'block';
+      }
+      
+      // Service worker registration for PWA support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
