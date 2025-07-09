@@ -86,9 +86,11 @@ export const fetchOrderTemplates = createAsyncThunk(
   'orders/fetchOrderTemplates',
   async (params?: { limit?: number; offset?: number }, { rejectWithValue }) => {
     try {
-      const response: any = await ordersApi.getOrderTemplates(params) // 응답 구조를 직접 참조하기 위해 'any'로 캐스팅
-      return response // 이 응답 객체에는 'templates'와 'count' 속성이 있습니다.
+      const response = await ordersApi.getOrderTemplates(params)
+      console.log('[fetchOrderTemplates] API 응답:', response)
+      return response
     } catch (error: any) {
+      console.error('[fetchOrderTemplates] API 오류:', error)
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch templates')
     }
   }
@@ -245,23 +247,33 @@ const orderSlice = createSlice({
         state.error = action.payload as string
       })
 
-    // Fetch order templates
+    // Fetch order templates - 여기가 수정된 부분입니다!
     builder
       .addCase(fetchOrderTemplates.pending, (state) => {
         state.templatesLoading = true
         state.error = null
+        console.log('[fetchOrderTemplates] Pending 상태')
       })
       .addCase(fetchOrderTemplates.fulfilled, (state, action) => {
         state.templatesLoading = false
-        // 여기가 수정된 부분입니다: action.payload.items 대신 action.payload.templates를 사용합니다.
-        state.templates = Array.isArray(action.payload.templates) ? action.payload.templates : []
-        // total count도 API 응답의 `count`를 사용합니다.
-        state.pagination.total = action.payload.count; 
+        console.log('[fetchOrderTemplates] Fulfilled 상태. Action payload:', action.payload)
+        
+        // 백엔드 응답 구조에 맞게 수정: data.items를 사용
+        const responseData = action.payload.data || action.payload
+        const templateItems = responseData.items || []
+        
+        console.log('[fetchOrderTemplates] 추출된 템플릿 배열:', templateItems)
+        
+        state.templates = Array.isArray(templateItems) ? templateItems : []
+        state.pagination.total = responseData.count || 0
         state.error = null
+        
+        console.log('[fetchOrderTemplates] Redux 상태 업데이트 완료. 템플릿 개수:', state.templates.length)
       })
       .addCase(fetchOrderTemplates.rejected, (state, action) => {
         state.templatesLoading = false
         state.error = action.payload as string
+        console.error('[fetchOrderTemplates] Rejected 상태:', action.payload)
       })
 
     // Fetch single order template

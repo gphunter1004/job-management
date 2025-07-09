@@ -53,10 +53,13 @@ export const fetchTemplates = createAsyncThunk(
   'templates/fetchTemplates',
   async (params?: { limit?: number; offset?: number }, { rejectWithValue }) => {
     try {
+      console.log('[fetchTemplates Thunk] API 호출 시작. Params:', params)
       const response = await ordersApi.getOrderTemplates(params)
-      return response 
+      console.log('[fetchTemplates Thunk] API 응답 수신:', response)
+      return response
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || '액션 템플릿 목록을 불러오지 못했습니다.')
+      console.error('[fetchTemplates Thunk] API 오류:', error)
+      return rejectWithValue(error.response?.data?.message || '템플릿 목록을 불러오지 못했습니다.')
     }
   }
 )
@@ -260,25 +263,33 @@ const templateSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // fetchTemplates (목록 조회)
+    // fetchTemplates (목록 조회) - 여기가 수정된 부분입니다!
     builder
       .addCase(fetchTemplates.pending, (state) => {
         state.isLoading = true
         state.error = null
+        console.log('[templateSlice] fetchTemplates.pending')
       })
       .addCase(fetchTemplates.fulfilled, (state, action) => {
         state.isLoading = false
-        const templatesData = action.payload.data;
-        state.templates = Array.isArray(templatesData?.items) ? templatesData?.items : [] 
-        state.pagination.total = templatesData?.count ?? 0;
+        console.log('[templateSlice] fetchTemplates.fulfilled. Action payload:', action.payload)
+        
+        // 백엔드 응답 구조에 맞게 수정: data.items를 사용
+        const responseData = action.payload.data || action.payload
+        const templateItems = responseData.items || []
+        
+        console.log('[templateSlice] 추출된 템플릿 배열:', templateItems)
+        
+        state.templates = Array.isArray(templateItems) ? templateItems : []
+        state.pagination.total = responseData.count || 0
         state.error = null
-        // 로그 추가: Redux 상태가 어떻게 업데이트되었는지 확인
-        console.log('[templateSlice] fetchTemplates.fulfilled: state.templates updated to', state.templates);
-        console.log('[templateSlice] fetchTemplates.fulfilled: state.pagination.total updated to', state.pagination.total);
+        
+        console.log('[templateSlice] Redux 상태 업데이트 완료. 템플릿 개수:', state.templates.length)
       })
       .addCase(fetchTemplates.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
+        console.error('[templateSlice] fetchTemplates.rejected:', action.payload)
       })
 
     // fetchTemplateDetails (상세 조회)

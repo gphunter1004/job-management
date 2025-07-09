@@ -13,7 +13,23 @@ export interface CreateNodeRequest {
   actions: ActionTemplate[] // ActionTemplate 타입은 types/order.ts에 정의되어 있음
 }
 
-export interface UpdateNodeRequest extends Partial<CreateNodeRequest> {}
+// 백엔드 API가 NodePosition을 플랫 구조로 받는 경우를 위한 인터페이스
+export interface CreateNodeRequestFlat {
+  nodeId: string
+  name: string
+  description?: string
+  sequenceId: number
+  released: boolean
+  x: number
+  y: number
+  theta: number
+  allowedDeviationXY: number
+  allowedDeviationTheta: number
+  mapId: string
+  actions: ActionTemplate[]
+}
+
+export interface UpdateNodeRequest extends Partial<CreateNodeRequestFlat> {}
 
 export interface NodeListResponse { // README.md의 GET /nodes 응답 구조에 맞춤
   nodes: NodeTemplate[]
@@ -23,34 +39,129 @@ export interface NodeListResponse { // README.md의 GET /nodes 응답 구조에 
 // Node Management API
 export const nodesApi = {
   // 노드 생성
-  createNode: (data: CreateNodeRequest): Promise<ApiResponse<NodeTemplate>> =>
-    api.post('/nodes', data),
+  createNode: (data: CreateNodeRequest | CreateNodeRequestFlat): Promise<ApiResponse<NodeTemplate>> => {
+    console.log('[nodesApi.createNode] 요청 데이터:', data)
+    
+    // position 객체가 있으면 플랫 구조로 변환
+    let requestData: CreateNodeRequestFlat
+    if ('position' in data && data.position) {
+      requestData = {
+        nodeId: data.nodeId,
+        name: data.name,
+        description: data.description,
+        sequenceId: data.sequenceId,
+        released: data.released,
+        x: data.position.x,
+        y: data.position.y,
+        theta: data.position.theta,
+        allowedDeviationXY: data.position.allowedDeviationXY,
+        allowedDeviationTheta: data.position.allowedDeviationTheta,
+        mapId: data.position.mapId,
+        actions: data.actions
+      }
+    } else {
+      requestData = data as CreateNodeRequestFlat
+    }
+    
+    console.log('[nodesApi.createNode] 변환된 요청 데이터:', requestData)
+    return api.post('/nodes', requestData)
+  },
 
   // 노드 목록 조회
   getNodes: (params?: { 
     limit?: number; 
     offset?: number; 
-    search?: string; // README에 명시된 필터는 없지만, 확장성을 위해 추가 가능
+    search?: string;
   }): Promise<NodeListResponse> => { 
     const queryString = params ? `?${buildQueryString(params)}` : ''
+    console.log(`[nodesApi.getNodes] API 호출: /nodes${queryString}`)
+    
     return api.get(`/nodes${queryString}`)
+      .then(response => {
+        console.log('[nodesApi.getNodes] API 응답:', response)
+        return response
+      })
+      .catch(error => {
+        console.error('[nodesApi.getNodes] API 오류:', error)
+        throw error
+      })
   },
 
   // 특정 노드 조회 (Database ID)
-  getNodeById: (id: number): Promise<ApiResponse<NodeTemplate>> =>
-    api.get(`/nodes/${id}`),
+  getNodeById: (id: number): Promise<ApiResponse<NodeTemplate>> => {
+    console.log(`[nodesApi.getNodeById] API 호출: /nodes/${id}`)
+    return api.get(`/nodes/${id}`)
+      .then(response => {
+        console.log('[nodesApi.getNodeById] API 응답:', response)
+        return response
+      })
+      .catch(error => {
+        console.error('[nodesApi.getNodeById] API 오류:', error)
+        throw error
+      })
+  },
 
   // 특정 노드 조회 (Node ID)
-  getNodeByNodeId: (nodeId: string): Promise<ApiResponse<NodeTemplate>> =>
-    api.get(`/nodes/by-node-id/${nodeId}`),
+  getNodeByNodeId: (nodeId: string): Promise<ApiResponse<NodeTemplate>> => {
+    console.log(`[nodesApi.getNodeByNodeId] API 호출: /nodes/by-node-id/${nodeId}`)
+    return api.get(`/nodes/by-node-id/${nodeId}`)
+      .then(response => {
+        console.log('[nodesApi.getNodeByNodeId] API 응답:', response)
+        return response
+      })
+      .catch(error => {
+        console.error('[nodesApi.getNodeByNodeId] API 오류:', error)
+        throw error
+      })
+  },
 
   // 노드 수정
-  updateNode: (id: number, data: UpdateNodeRequest): Promise<ApiResponse<NodeTemplate>> =>
-    api.put(`/nodes/${id}`, data),
+  updateNode: (id: number, data: UpdateNodeRequest): Promise<ApiResponse<NodeTemplate>> => {
+    console.log(`[nodesApi.updateNode] API 호출: /nodes/${id}`, data)
+    
+    // position 객체가 있으면 플랫 구조로 변환
+    let requestData: UpdateNodeRequest
+    if ('position' in data && data.position) {
+      const { position, ...rest } = data as any
+      requestData = {
+        ...rest,
+        x: position.x,
+        y: position.y,
+        theta: position.theta,
+        allowedDeviationXY: position.allowedDeviationXY,
+        allowedDeviationTheta: position.allowedDeviationTheta,
+        mapId: position.mapId,
+      }
+    } else {
+      requestData = data
+    }
+    
+    console.log('[nodesApi.updateNode] 변환된 요청 데이터:', requestData)
+    
+    return api.put(`/nodes/${id}`, requestData)
+      .then(response => {
+        console.log('[nodesApi.updateNode] API 응답:', response)
+        return response
+      })
+      .catch(error => {
+        console.error('[nodesApi.updateNode] API 오류:', error)
+        throw error
+      })
+  },
 
   // 노드 삭제
-  deleteNode: (id: number): Promise<ApiResponse> =>
-    api.delete(`/nodes/${id}`),
+  deleteNode: (id: number): Promise<ApiResponse> => {
+    console.log(`[nodesApi.deleteNode] API 호출: /nodes/${id}`)
+    return api.delete(`/nodes/${id}`)
+      .then(response => {
+        console.log('[nodesApi.deleteNode] API 응답:', response)
+        return response
+      })
+      .catch(error => {
+        console.error('[nodesApi.deleteNode] API 오류:', error)
+        throw error
+      })
+  },
 }
 
 export default nodesApi

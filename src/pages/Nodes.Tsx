@@ -9,23 +9,35 @@ import SearchBar from '@/components/common/SearchBar'
 import Select from '@/components/ui/Select'
 
 import { useAppSelector, useAppDispatch } from '@/store'
-import { fetchNodes, createNode, updateNode, deleteNode } from '@/store/slices/nodeSlice'
+import { fetchNodes, createNode, updateNode, deleteNode, fetchNodeById, setSelectedNode } from '@/store/slices/nodeSlice'
 import { NodeTemplate, NodePosition, ActionTemplate } from '@/types/order'
+import { CreateNodeRequestFlat } from '@/api/nodes'
 
 const Nodes = () => {
   const dispatch = useAppDispatch()
-  const { nodes, isLoading, error, pagination } = useAppSelector(state => state.nodes)
+  const { nodes, isLoading, error, pagination, selectedNode } = useAppSelector(state => state.nodes)
 
   const [showNodeForm, setShowNodeForm] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
-  const [currentNode, setCurrentNode] = useState<Omit<NodeTemplate, 'createdAt' | 'updatedAt' | 'id'> & { id?: number, position: NodePosition, actions: ActionTemplate[] }>({
+  const [currentNode, setCurrentNode] = useState<Omit<NodeTemplate, 'createdAt' | 'updatedAt' | 'id'> & { 
+    id?: number, 
+    position: NodePosition, 
+    actions: ActionTemplate[] 
+  }>({
     nodeId: '',
     name: '',
     description: '',
     sequenceId: 1,
     released: false,
+    x: 0,
+    y: 0,
+    theta: 0,
+    allowedDeviationXY: 0.1,
+    allowedDeviationTheta: 0.1,
+    mapId: 'default_map',
+    actionTemplateIds: '[]',
     position: {
       x: 0,
       y: 0,
@@ -38,32 +50,79 @@ const Nodes = () => {
   })
 
   useEffect(() => {
+    console.log('[Nodes 페이지] 컴포넌트 마운트됨. 노드 목록 조회 시작')
     dispatch(fetchNodes({ limit: pagination.limit, offset: pagination.offset, search: searchTerm }))
   }, [dispatch, pagination.limit, pagination.offset, searchTerm])
 
+  // 선택된 노드가 변경되면 편집 폼에 반영
+  useEffect(() => {
+    if (selectedNode && isEditing) {
+      console.log('[Nodes 페이지] 선택된 노드 변경됨:', selectedNode)
+      setCurrentNode({
+        id: selectedNode.id,
+        nodeId: selectedNode.nodeId,
+        name: selectedNode.name,
+        description: selectedNode.description || '',
+        sequenceId: selectedNode.sequenceId,
+        released: selectedNode.released,
+        x: selectedNode.x,
+        y: selectedNode.y,
+        theta: selectedNode.theta,
+        allowedDeviationXY: selectedNode.allowedDeviationXY,
+        allowedDeviationTheta: selectedNode.allowedDeviationTheta,
+        mapId: selectedNode.mapId,
+        actionTemplateIds: selectedNode.actionTemplateIds,
+        position: { // NodeTemplate에서 NodePosition으로 매핑
+          x: selectedNode.x,
+          y: selectedNode.y,
+          theta: selectedNode.theta,
+          allowedDeviationXY: selectedNode.allowedDeviationXY,
+          allowedDeviationTheta: selectedNode.allowedDeviationTheta,
+          mapId: selectedNode.mapId
+        },
+        actions: [], // 액션은 별도 관리가 필요함
+      })
+    }
+  }, [selectedNode, isEditing])
+
   const handleCreateOrUpdateNode = async () => {
     if (currentNode.nodeId.trim() && currentNode.name.trim()) {
-      const nodeData = {
-        ...currentNode,
-        sequenceId: Number(currentNode.sequenceId), // ensure number type
+      const nodeData: CreateNodeRequestFlat = {
+        nodeId: currentNode.nodeId,
+        name: currentNode.name,
+        description: currentNode.description,
+        sequenceId: Number(currentNode.sequenceId),
+        released: currentNode.released,
         x: Number(currentNode.position.x),
         y: Number(currentNode.position.y),
         theta: Number(currentNode.position.theta),
         allowedDeviationXY: Number(currentNode.position.allowedDeviationXY),
         allowedDeviationTheta: Number(currentNode.position.allowedDeviationTheta),
+        mapId: currentNode.position.mapId,
+        actions: currentNode.actions
       };
 
       try {
+        console.log('[Nodes 페이지] 노드 저장 시작:', { isEditing, nodeData })
+        
         if (isEditing && currentNode.id) {
+          console.log('[Nodes 페이지] 노드 수정 요청. ID:', currentNode.id)
           await dispatch(updateNode({ id: currentNode.id, data: nodeData })).unwrap()
+          console.log('[Nodes 페이지] 노드 수정 성공')
         } else {
-          await dispatch(createNode(nodeData as CreateNodeRequest)).unwrap()
+          console.log('[Nodes 페이지] 노드 생성 요청')
+          await dispatch(createNode(nodeData)).unwrap()
+          console.log('[Nodes 페이지] 노드 생성 성공')
         }
+        
         setShowNodeForm(false)
         resetForm()
-        dispatch(fetchNodes({ limit: pagination.limit, offset: pagination.offset, search: searchTerm })) // 목록 새로고침
+        
+        // 목록 새로고침
+        console.log('[Nodes 페이지] 목록 새로고침 요청')
+        dispatch(fetchNodes({ limit: pagination.limit, offset: pagination.offset, search: searchTerm }))
       } catch (err) {
-        console.error('노드 저장 실패:', err)
+        console.error('[Nodes 페이지] 노드 저장 실패:', err)
       }
     }
   }
@@ -71,45 +130,65 @@ const Nodes = () => {
   const handleDeleteNode = async (id: number) => {
     if (window.confirm('정말로 이 노드를 삭제하시겠습니까?')) {
       try {
+        console.log('[Nodes 페이지] 노드 삭제 요청. ID:', id)
         await dispatch(deleteNode(id)).unwrap()
-        dispatch(fetchNodes({ limit: pagination.limit, offset: pagination.offset, search: searchTerm })) // 목록 새로고침
+        console.log('[Nodes 페이지] 노드 삭제 성공')
+        
+        // 목록 새로고침
+        dispatch(fetchNodes({ limit: pagination.limit, offset: pagination.offset, search: searchTerm }))
       } catch (err) {
-        console.error('노드 삭제 실패:', err)
+        console.error('[Nodes 페이지] 노드 삭제 실패:', err)
       }
     }
   }
 
-  const handleEditNode = (node: NodeTemplate) => {
-    setCurrentNode({
-      nodeId: node.nodeId,
-      name: node.name,
-      description: node.description || '',
-      sequenceId: node.sequenceId,
-      released: node.released,
-      position: { // NodeTemplate에서 NodePosition으로 매핑
-        x: node.x,
-        y: node.y,
-        theta: node.theta,
-        allowedDeviationXY: node.allowedDeviationXY,
-        allowedDeviationTheta: node.allowedDeviationTheta,
-        mapId: node.mapId
-      },
-      // actions는 NodeTemplate에 직접 포함되어 있지 않으므로, 상세 조회 또는 별도 관리 필요.
-      // 여기서는 기본값으로 빈 배열을 사용하거나, 필요시 fetchNodeById를 호출하여 상세 액션 로드
-      actions: [], 
-      id: node.id // 편집을 위해 ID 포함
-    })
-    setIsEditing(true)
-    setShowNodeForm(true)
+  const handleEditNode = async (node: NodeTemplate) => {
+    console.log('[Nodes 페이지] 노드 편집 시작:', node)
+    
+    try {
+      // 선택된 노드 설정
+      dispatch(setSelectedNode(node))
+      
+      // 최신 노드 정보 가져오기 (상세 정보 포함)
+      await dispatch(fetchNodeById(node.id)).unwrap()
+      
+      // 편집 모드로 전환
+      setIsEditing(true)
+      setShowNodeForm(true)
+      
+      console.log('[Nodes 페이지] 편집 폼 열기 완료')
+    } catch (err) {
+      console.error('[Nodes 페이지] 노드 편집 준비 실패:', err)
+    }
   }
 
   const resetForm = () => {
+    console.log('[Nodes 페이지] 폼 리셋')
     setCurrentNode({
-      nodeId: '', name: '', description: '', sequenceId: 1, released: false,
-      position: { x: 0, y: 0, theta: 0, allowedDeviationXY: 0.1, allowedDeviationTheta: 0.1, mapId: 'default_map' },
+      nodeId: '', 
+      name: '', 
+      description: '', 
+      sequenceId: 1, 
+      released: false,
+      x: 0,
+      y: 0,
+      theta: 0,
+      allowedDeviationXY: 0.1,
+      allowedDeviationTheta: 0.1,
+      mapId: 'default_map',
+      actionTemplateIds: '[]',
+      position: { 
+        x: 0, 
+        y: 0, 
+        theta: 0, 
+        allowedDeviationXY: 0.1, 
+        allowedDeviationTheta: 0.1, 
+        mapId: 'default_map' 
+      },
       actions: []
     })
     setIsEditing(false)
+    dispatch(setSelectedNode(null))
   }
   
   // 액션 관리를 위한 헬퍼 함수 (CreateNodeModal에서 가져옴)
@@ -118,14 +197,23 @@ const Nodes = () => {
       ...prev,
       actions: [
         ...prev.actions,
-        { actionType: '', actionId: '', blockingType: 'HARD', actionDescription: '', parameters: [], id: Date.now(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        { 
+          actionType: '', 
+          actionId: '', 
+          blockingType: 'HARD', 
+          actionDescription: '', 
+          parameters: [], 
+          id: Date.now(), 
+          createdAt: new Date().toISOString(), 
+          updatedAt: new Date().toISOString() 
+        }
       ]
     }))
   }
 
   const updateAction = (index: number, field: string, value: any) => {
     const newActions = [...currentNode.actions]
-    if(field === 'parameters') { // 매개변수 자체를 업데이트하는 경우
+    if(field === 'parameters') {
         newActions[index] = { ...newActions[index], parameters: value }
     } else {
         newActions[index] = { ...newActions[index], [field]: value }
@@ -146,7 +234,7 @@ const Nodes = () => {
       ...(updatedActions[actionIndex].parameters || []),
       { 
         id: Date.now(), 
-        actionTemplateId: updatedActions[actionIndex].id || 0, // 액션의 ID와 연결
+        actionTemplateId: updatedActions[actionIndex].id || 0,
         key: '', 
         value: '', 
         valueType: 'string' 
@@ -188,6 +276,15 @@ const Nodes = () => {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <Card className="p-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="노드 이름 또는 ID로 검색..."
+        />
+      </Card>
+
       {/* 오류 메시지 표시 */}
       {error && (
         <Card className="p-6 bg-error-50 border border-error-200 text-error-700">
@@ -204,244 +301,301 @@ const Nodes = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             {isEditing ? '노드 편집' : '새 노드 정의'}
           </h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">노드 ID *</label>
-                <input
-                  type="text"
-                  value={currentNode.nodeId}
-                  onChange={(e) => setCurrentNode(prev => ({ ...prev, nodeId: e.target.value }))}
-                  className="form-input"
-                  placeholder="예: node_001"
-                  disabled={isEditing}
-                />
-              </div>
-              <div>
-                <label className="form-label">노드 이름 *</label>
-                <input
-                  type="text"
-                  value={currentNode.name}
-                  onChange={(e) => setCurrentNode(prev => ({ ...prev, name: e.target.value }))}
-                  className="form-input"
-                  placeholder="예: 픽업 지점 A"
-                />
-              </div>
+          {isLoading && isEditing ? (
+            <div className="flex items-center justify-center h-48">
+              <LoadingSpinner size="md" text="노드 상세 정보 불러오는 중..." />
             </div>
-
-            <div>
-              <label className="form-label">설명</label>
-              <textarea
-                value={currentNode.description || ''}
-                onChange={(e) => setCurrentNode(prev => ({ ...prev, description: e.target.value }))}
-                className="form-input"
-                rows={2}
-                placeholder="노드에 대한 간단한 설명..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">시퀀스 ID</label>
-                <input
-                  type="number"
-                  value={currentNode.sequenceId}
-                  onChange={(e) => setCurrentNode(prev => ({ ...prev, sequenceId: parseInt(e.target.value) || 1 }))}
-                  className="form-input"
-                  min="1"
-                />
-              </div>
-              <div className="flex items-center space-x-3 mt-6 md:mt-0">
-                <input
-                  type="checkbox"
-                  id="node-released"
-                  checked={currentNode.released}
-                  onChange={(e) => setCurrentNode(prev => ({ ...prev, released: e.target.checked }))}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                />
-                <label htmlFor="node-released" className="text-sm text-gray-700">
-                  실행을 위해 릴리스됨
-                </label>
-              </div>
-            </div>
-
-            {/* 위치 정보 */}
-            <div className="border-t border-gray-200 pt-4 mt-4">
-              <h4 className="text-sm font-medium text-gray-900">위치 정보</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="form-label">X 좌표</label>
+                  <label className="form-label">노드 ID *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={currentNode.position.x}
-                    onChange={(e) => setCurrentNode(prev => ({ ...prev, position: { ...prev.position, x: parseFloat(e.target.value) || 0 } }))}
+                    type="text"
+                    value={currentNode.nodeId}
+                    onChange={(e) => setCurrentNode(prev => ({ ...prev, nodeId: e.target.value }))}
                     className="form-input"
+                    placeholder="예: node_001"
+                    disabled={isEditing}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Y 좌표</label>
+                  <label className="form-label">노드 이름 *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={currentNode.position.y}
-                    onChange={(e) => setCurrentNode(prev => ({ ...prev, position: { ...prev.position, y: parseFloat(e.target.value) || 0 } }))}
+                    type="text"
+                    value={currentNode.name}
+                    onChange={(e) => setCurrentNode(prev => ({ ...prev, name: e.target.value }))}
                     className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Theta (회전)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={currentNode.position.theta}
-                    onChange={(e) => setCurrentNode(prev => ({ ...prev, position: { ...prev.position, theta: parseFloat(e.target.value) || 0 } }))}
-                    className="form-input"
+                    placeholder="예: 픽업 지점 A"
                   />
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="form-label">맵 ID</label>
-                <select
-                  value={currentNode.position.mapId}
-                  onChange={(e) => setCurrentNode(prev => ({ ...prev, position: { ...prev.position, mapId: e.target.value } }))}
-                  className="form-input"
-                >
-                  <option value="default_map">기본 맵</option>
-                  <option value="warehouse_floor_1">창고 1층</option>
-                  <option value="warehouse_floor_2">창고 2층</option>
-                </select>
-              </div>
-            </div>
 
-            {/* 액션 섹션 */}
-            <div className="border-t border-gray-200 pt-4 mt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-gray-900">노드 액션</h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Plus className="w-3 h-3" />}
-                  onClick={addAction}
-                >
-                  액션 추가
-                </Button>
+              <div>
+                <label className="form-label">설명</label>
+                <textarea
+                  value={currentNode.description || ''}
+                  onChange={(e) => setCurrentNode(prev => ({ ...prev, description: e.target.value }))}
+                  className="form-input"
+                  rows={2}
+                  placeholder="노드에 대한 간단한 설명..."
+                />
               </div>
-              {currentNode.actions.length === 0 && (
-                <p className="text-sm text-gray-500">이 노드에 대한 액션이 없습니다.</p>
-              )}
-              {currentNode.actions.map((action, actionIndex) => (
-                <Card key={actionIndex} className="p-4 mb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <label className="form-label mb-0">액션 타입</label>
-                        <select
-                            value={action.actionType}
-                            onChange={(e) => updateAction(actionIndex, 'actionType', e.target.value)}
-                            className="form-input text-sm py-1"
-                        >
-                            <option value="">선택...</option>
-                            <option value="move">이동</option>
-                            <option value="pick">집기</option>
-                            <option value="place">놓기</option>
-                            <option value="wait">대기</option>
-                            <option value="scan">스캔</option>
-                            <option value="custom">커스텀</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <label className="form-label mb-0">액션 ID</label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">시퀀스 ID</label>
+                  <input
+                    type="number"
+                    value={currentNode.sequenceId}
+                    onChange={(e) => setCurrentNode(prev => ({ ...prev, sequenceId: parseInt(e.target.value) || 1 }))}
+                    className="form-input"
+                    min="1"
+                  />
+                </div>
+                <div className="flex items-center space-x-3 mt-6 md:mt-0">
+                  <input
+                    type="checkbox"
+                    id="node-released"
+                    checked={currentNode.released}
+                    onChange={(e) => setCurrentNode(prev => ({ ...prev, released: e.target.checked }))}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="node-released" className="text-sm text-gray-700">
+                    실행을 위해 릴리스됨
+                  </label>
+                </div>
+              </div>
+
+              {/* 위치 정보 */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <h4 className="text-sm font-medium text-gray-900">위치 정보</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="form-label">X 좌표</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentNode.position.x}
+                      onChange={(e) => setCurrentNode(prev => ({ 
+                        ...prev, 
+                        position: { ...prev.position, x: parseFloat(e.target.value) || 0 },
+                        x: parseFloat(e.target.value) || 0
+                      }))}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Y 좌표</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentNode.position.y}
+                      onChange={(e) => setCurrentNode(prev => ({ 
+                        ...prev, 
+                        position: { ...prev.position, y: parseFloat(e.target.value) || 0 },
+                        y: parseFloat(e.target.value) || 0
+                      }))}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Theta (회전)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentNode.position.theta}
+                      onChange={(e) => setCurrentNode(prev => ({ 
+                        ...prev, 
+                        position: { ...prev.position, theta: parseFloat(e.target.value) || 0 },
+                        theta: parseFloat(e.target.value) || 0
+                      }))}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="form-label">허용 편차 XY</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentNode.position.allowedDeviationXY}
+                      onChange={(e) => setCurrentNode(prev => ({ 
+                        ...prev, 
+                        position: { ...prev.position, allowedDeviationXY: parseFloat(e.target.value) || 0 },
+                        allowedDeviationXY: parseFloat(e.target.value) || 0
+                      }))}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">허용 편차 Theta</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentNode.position.allowedDeviationTheta}
+                      onChange={(e) => setCurrentNode(prev => ({ 
+                        ...prev, 
+                        position: { ...prev.position, allowedDeviationTheta: parseFloat(e.target.value) || 0 },
+                        allowedDeviationTheta: parseFloat(e.target.value) || 0
+                      }))}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="form-label">맵 ID</label>
+                  <select
+                    value={currentNode.position.mapId}
+                    onChange={(e) => setCurrentNode(prev => ({ 
+                      ...prev, 
+                      position: { ...prev.position, mapId: e.target.value },
+                      mapId: e.target.value
+                    }))}
+                    className="form-input"
+                  >
+                    <option value="default_map">기본 맵</option>
+                    <option value="warehouse_floor_1">창고 1층</option>
+                    <option value="warehouse_floor_2">창고 2층</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 액션 섹션 */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-900">노드 액션</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Plus className="w-3 h-3" />}
+                    onClick={addAction}
+                  >
+                    액션 추가
+                  </Button>
+                </div>
+                {currentNode.actions.length === 0 && (
+                  <p className="text-sm text-gray-500">이 노드에 대한 액션이 없습니다.</p>
+                )}
+                {currentNode.actions.map((action, actionIndex) => (
+                  <Card key={actionIndex} className="p-4 mb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <label className="form-label mb-0">액션 타입</label>
+                          <select
+                              value={action.actionType}
+                              onChange={(e) => updateAction(actionIndex, 'actionType', e.target.value)}
+                              className="form-input text-sm py-1"
+                          >
+                              <option value="">선택...</option>
+                              <option value="move">이동</option>
+                              <option value="pick">집기</option>
+                              <option value="place">놓기</option>
+                              <option value="wait">대기</option>
+                              <option value="scan">스캔</option>
+                              <option value="custom">커스텀</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <label className="form-label mb-0">액션 ID</label>
+                            <input
+                                type="text"
+                                value={action.actionId}
+                                onChange={(e) => updateAction(actionIndex, 'actionId', e.target.value)}
+                                className="form-input text-sm py-1"
+                                placeholder="액션 ID"
+                            />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <label className="form-label mb-0">설명</label>
                           <input
                               type="text"
-                              value={action.actionId}
-                              onChange={(e) => updateAction(actionIndex, 'actionId', e.target.value)}
+                              value={action.actionDescription || ''}
+                              onChange={(e) => updateAction(actionIndex, 'actionDescription', e.target.value)}
                               className="form-input text-sm py-1"
-                              placeholder="액션 ID"
+                              placeholder="액션 설명"
                           />
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <label className="form-label mb-0">매개변수:</label>
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={<Plus className="w-3 h-3" />}
+                              onClick={() => addParameter(actionIndex)}
+                          >
+                              매개변수 추가
+                          </Button>
+                        </div>
+                        {/* 매개변수 목록 */}
+                        {(action.parameters || []).length === 0 && (
+                            <p className="text-xs text-gray-500 ml-4">매개변수 없음</p>
+                        )}
+                        {(action.parameters || []).map((param, paramIndex) => (
+                            <div key={paramIndex} className="grid grid-cols-12 gap-2 mb-1 items-center ml-4">
+                                <input
+                                    type="text"
+                                    value={param.key}
+                                    onChange={(e) => updateParameter(actionIndex, paramIndex, 'key', e.target.value)}
+                                    className="form-input col-span-4 text-xs py-1"
+                                    placeholder="키"
+                                />
+                                <input
+                                    type="text"
+                                    value={param.value}
+                                    onChange={(e) => updateParameter(actionIndex, paramIndex, 'value', e.target.value)}
+                                    className="form-input col-span-5 text-xs py-1"
+                                    placeholder="값"
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    onClick={() => removeParameter(actionIndex, paramIndex)}
+                                    className="text-error-600 hover:text-error-700 col-span-3"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </Button>
+                            </div>
+                        ))}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <label className="form-label mb-0">설명</label>
-                        <input
-                            type="text"
-                            value={action.actionDescription || ''}
-                            onChange={(e) => updateAction(actionIndex, 'actionDescription', e.target.value)}
-                            className="form-input text-sm py-1"
-                            placeholder="액션 설명"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <label className="form-label mb-0">매개변수:</label>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            leftIcon={<Plus className="w-3 h-3" />}
-                            onClick={() => addParameter(actionIndex)}
-                        >
-                            매개변수 추가
-                        </Button>
-                      </div>
-                      {/* 매개변수 목록 */}
-                      {(action.parameters || []).length === 0 && (
-                          <p className="text-xs text-gray-500 ml-4">매개변수 없음</p>
-                      )}
-                      {(action.parameters || []).map((param, paramIndex) => (
-                          <div key={paramIndex} className="grid grid-cols-12 gap-2 mb-1 items-center ml-4">
-                              <input
-                                  type="text"
-                                  value={param.key}
-                                  onChange={(e) => updateParameter(actionIndex, paramIndex, 'key', e.target.value)}
-                                  className="form-input col-span-4 text-xs py-1"
-                                  placeholder="키"
-                              />
-                              <input
-                                  type="text"
-                                  value={param.value}
-                                  onChange={(e) => updateParameter(actionIndex, paramIndex, 'value', e.target.value)}
-                                  className="form-input col-span-5 text-xs py-1"
-                                  placeholder="값"
-                              />
-                              <Button
-                                  variant="ghost"
-                                  size="xs"
-                                  onClick={() => removeParameter(actionIndex, paramIndex)}
-                                  className="text-error-600 hover:text-error-700 col-span-3"
-                              >
-                                  <Trash2 className="w-3 h-3" />
-                              </Button>
-                          </div>
-                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAction(actionIndex)}
+                        className="text-error-600 hover:text-error-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeAction(actionIndex)}
-                      className="text-error-600 hover:text-error-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  </Card>
+                ))}
+              </div>
 
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button variant="outline" onClick={() => setShowNodeForm(false)}>
-                취소
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleCreateOrUpdateNode}
-                disabled={isLoading || !currentNode.nodeId.trim() || !currentNode.name.trim()}
-              >
-                {isLoading ? '저장 중...' : isEditing ? '노드 수정' : '노드 생성'}
-              </Button>
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button variant="outline" onClick={() => setShowNodeForm(false)}>
+                  취소
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateOrUpdateNode}
+                  disabled={isLoading || !currentNode.nodeId.trim() || !currentNode.name.trim()}
+                >
+                  {isLoading ? '저장 중...' : isEditing ? '노드 수정' : '노드 생성'}
+                </Button>
+              </div>
             </div>
-          </Card>
-        )}
+          )}
+        </Card>
+      )}
 
       {/* 노드 목록 */}
-      {nodes.length === 0 && !isLoading ? (
+      {isLoading && nodes.length === 0 ? (
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner size="lg" text="노드 목록을 불러오는 중..." />
+        </div>
+      ) : nodes.length === 0 ? (
         <Card className="p-12 text-center">
           <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 노드 없음</h3>
@@ -458,7 +612,7 @@ const Nodes = () => {
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {nodes.map((node) => (
-            <Card key={node.id} className="p-6">
+            <Card key={node.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <Badge variant="primary">{node.name}</Badge>
                 <span className="text-sm text-gray-500">ID: {node.nodeId}</span>
@@ -468,6 +622,9 @@ const Nodes = () => {
               <div className="text-sm text-gray-600 space-y-1">
                 <p>시퀀스: <Badge variant="secondary" size="sm">{node.sequenceId}</Badge></p>
                 <p>위치: ({node.x.toFixed(2)}, {node.y.toFixed(2)}) on {node.mapId}</p>
+                <p>릴리스됨: <Badge variant={node.released ? 'success' : 'warning'} size="sm">
+                  {node.released ? '예' : '아니오'}
+                </Badge></p>
                 <p>액션 수: {node.actionTemplateIds ? JSON.parse(node.actionTemplateIds).length : 0}</p>
               </div>
 
@@ -477,6 +634,7 @@ const Nodes = () => {
                   size="sm" 
                   leftIcon={<Edit className="w-3 h-3" />}
                   onClick={() => handleEditNode(node)}
+                  disabled={isLoading}
                 >
                   편집
                 </Button>
@@ -492,6 +650,13 @@ const Nodes = () => {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* 결과 수 표시 */}
+      {nodes.length > 0 && (
+        <div className="text-center text-sm text-gray-500">
+          총 {nodes.length}개의 노드
         </div>
       )}
     </div>

@@ -10,7 +10,7 @@ import Templates from '@/pages/Templates'
 import TemplateDetail from '@/pages/TemplateDetail'
 import Settings from '@/pages/Settings'
 import Actions from '@/pages/Actions' 
-//import Nodes from '@/pages/Nodes' 
+import Nodes from '@/pages/Nodes' 
 //import Edges from '@/pages/Edges' 
 import NotFound from '@/pages/NotFound'
 
@@ -43,7 +43,7 @@ function App() {
           <Route path="/actions" element={<Actions />} />
           
           {/* Nodes Route (새로 추가될 라우트) */}
-          {/*<Route path="/nodes" element={<Nodes />} /> */}
+          {<Route path="/nodes" element={<Nodes />} /> }
           
           {/* Edges Route (새로 추가될 라우트) */}
           {/*<Route path="/edges" element={<Edges />} /> */}
