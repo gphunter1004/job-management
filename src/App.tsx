@@ -11,7 +11,7 @@ import TemplateDetail from '@/pages/TemplateDetail'
 import Settings from '@/pages/Settings'
 import Actions from '@/pages/Actions' 
 import Nodes from '@/pages/Nodes' 
-//import Edges from '@/pages/Edges' 
+import Edges from '@/pages/Edges' 
 import NotFound from '@/pages/NotFound'
 
 import ErrorBoundary from '@/components/common/ErrorBoundary'
@@ -46,7 +46,7 @@ function App() {
           {<Route path="/nodes" element={<Nodes />} /> }
           
           {/* Edges Route (새로 추가될 라우트) */}
-          {/*<Route path="/edges" element={<Edges />} /> */}
+          {<Route path="/edges" element={<Edges />} /> }
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />
