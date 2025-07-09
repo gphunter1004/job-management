@@ -4,9 +4,12 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux'
 import authSlice from './slices/authSlice'
 import robotSlice from './slices/robotSlice'
 import orderSlice from './slices/orderSlice'
-import templateSlice from './slices/templateSlice'
+import templateSlice from './slices/templateSlice' // 경로 수정: './slices/slices/templateSlice' -> './slices/templateSlice'
 import dashboardSlice from './slices/dashboardSlice'
 import uiSlice from './slices/uiSlice'
+import actionSlice from './slices/actionSlice'
+import nodeSlice from './slices/nodeSlice'
+import edgeSlice from './slices/edgeSlice'
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +19,9 @@ export const store = configureStore({
     templates: templateSlice,
     dashboard: dashboardSlice,
     ui: uiSlice,
+    action: actionSlice,
+    nodes: nodeSlice,
+    edges: edgeSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

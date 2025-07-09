@@ -9,6 +9,9 @@ import OrderDetail from '@/pages/OrderDetail'
 import Templates from '@/pages/Templates'
 import TemplateDetail from '@/pages/TemplateDetail'
 import Settings from '@/pages/Settings'
+import Actions from '@/pages/Actions' 
+//import Nodes from '@/pages/Nodes' 
+//import Edges from '@/pages/Edges' 
 import NotFound from '@/pages/NotFound'
 
 import ErrorBoundary from '@/components/common/ErrorBoundary'
@@ -19,8 +22,10 @@ function App() {
     <ErrorBoundary>
       <Layout>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* 기본 경로를 /robots로 변경합니다. */}
+          <Route path="/" element={<Navigate to="/robots" replace />} /> 
+          {/* Dashboard 경로는 그대로 유지됩니다. 하지만 기본 화면이 아니게 됩니다. */}
+          <Route path="/dashboard" element={<Dashboard />} /> 
           
           {/* Robot Routes */}
           <Route path="/robots" element={<Robots />} />
@@ -34,6 +39,15 @@ function App() {
           <Route path="/templates" element={<Templates />} />
           <Route path="/templates/:templateId" element={<TemplateDetail />} />
           
+          {/* Actions Route */}
+          <Route path="/actions" element={<Actions />} />
+          
+          {/* Nodes Route (새로 추가될 라우트) */}
+          {/*<Route path="/nodes" element={<Nodes />} /> */}
+          
+          {/* Edges Route (새로 추가될 라우트) */}
+          {/*<Route path="/edges" element={<Edges />} /> */}
+
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />
           

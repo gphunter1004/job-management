@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react'
-import { Search, X } from 'lucide-react'
-import clsx from 'clsx'
-import { useDebounce } from '@/hooks/useDebounce'
+import { useState, useEffect, useRef } from 'react'; // Import useRef
+import { Search, X } from 'lucide-react';
+import clsx from 'clsx';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchBarProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  debounceMs?: number
-  className?: string
-  onFocus?: () => void
-  onBlur?: () => void
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  debounceMs?: number;
+  className?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  disabled?: boolean;
 }
 
 const SearchBar = ({
@@ -24,21 +24,39 @@ const SearchBar = ({
   onBlur,
   disabled = false,
 }: SearchBarProps) => {
-  const [internalValue, setInternalValue] = useState(value)
-  const debouncedValue = useDebounce(internalValue, debounceMs)
+  const [internalValue, setInternalValue] = useState(value);
+  const debouncedValue = useDebounce(internalValue, debounceMs);
+
+  // Use a ref to track if it's the initial mount to prevent calling onChange on mount
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    onChange(debouncedValue)
-  }, [debouncedValue, onChange])
+    // Prevent calling onChange on the initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Only call onChange if the debounced value is different from the current external value (Redux state)
+    // This is crucial to prevent the infinite loop when Redux updates the external value
+    // back to the same debounced value that triggered the Redux update.
+    if (debouncedValue !== value) {
+      onChange(debouncedValue);
+    }
+  }, [debouncedValue, onChange, value]); // Added 'value' to dependencies to ensure comparison is accurate
 
   useEffect(() => {
-    setInternalValue(value)
-  }, [value])
+    // Update internalValue only if the external value prop truly changes
+    // and is different from the current internalValue, to prevent unnecessary re-renders.
+    if (value !== internalValue) {
+      setInternalValue(value);
+    }
+  }, [value, internalValue]); // Added 'internalValue' to dependencies
 
   const handleClear = () => {
-    setInternalValue('')
-    onChange('')
-  }
+    setInternalValue('');
+    onChange(''); // This should also update the external state immediately
+  };
 
   return (
     <div className={clsx('relative', className)}>
@@ -77,7 +95,7 @@ const SearchBar = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default SearchBar
+export default SearchBar;

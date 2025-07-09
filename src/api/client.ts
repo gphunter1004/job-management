@@ -123,8 +123,52 @@ export interface ApiListResponse<T = any> extends ApiResponse<T> {
 export const api = {
   // GET request
   get: async <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    const response = await apiClient.get<T>(url, config)
-    return response.data
+    let response: AxiosResponse<T>;
+    try {
+      console.log(`[client.ts - api.get] Requesting: ${url}`);
+      response = await apiClient.get<T>(url, config);
+      console.log(`[client.ts - api.get] Response received for ${url}. Status: ${response.status}`);
+      console.log(`[client.ts - api.get] Response data type: ${typeof response.data}`);
+      console.log(`[client.ts - api.get] Response data value:`, response.data);
+      console.log(`[client.ts - api.get] Response headers['content-type']:`, response.headers['content-type']);
+      
+      // Axios가 response.data를 자동으로 파싱하지 못했을 경우를 대비하여 rawResponseText를 확인합니다.
+      const rawResponseText = (response.request as any)?.responseText;
+      if (rawResponseText) {
+          console.log(`[client.ts - api.get] Raw response text snippet: ${rawResponseText.substring(0, Math.min(rawResponseText.length, 200))}...`);
+      } else {
+          console.log(`[client.ts - api.get] No raw response text available.`);
+      }
+
+    } catch (error: any) {
+      console.error(`[client.ts - api.get] Request to ${url} failed in try-catch block:`, error);
+      throw error; 
+    }
+    
+    // 여기가 수정된 부분입니다: response.data가 null/undefined일 경우를 방어적으로 처리
+    if ((response.status >= 200 && response.status < 300) && (response.data === null || response.data === undefined)) {
+      console.warn(`[client.ts - api.get] Response data is null/undefined for URL ${url}. Status: ${response.status}. Content-Type: ${response.headers['content-type']}. Attempting manual parse if text available.`);
+      
+      const contentType = response.headers['content-type'];
+      const rawResponseText = (response.request as any)?.responseText;
+      
+      if (contentType && contentType.includes('application/json') && rawResponseText) {
+        try {
+          console.log("[client.ts - api.get] Attempting manual JSON parse from raw text...");
+          const parsedData = JSON.parse(rawResponseText);
+          console.log("[client.ts - api.get] Manual JSON parse successful:", parsedData);
+          return parsedData;
+        } catch (e) {
+          console.error("[client.ts - api.get] Manual JSON parse failed:", e);
+          return {} as T;
+        }
+      }
+      
+      console.warn("[client.ts - api.get] No JSON content type or raw text available for manual parse. Returning empty object.");
+      return {} as T; 
+    }
+    
+    return response.data;
   },
 
   // POST request

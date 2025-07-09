@@ -7,23 +7,28 @@ import {
   Settings,
   Activity,
   Zap,
-  Database
-} from 'lucide-react'
+  Database,
+  MapPin, // MapPin 아이콘 추가
+  Target // Target 아이콘 추가
+} from 'lucide-react' 
 import { useAppSelector } from '@/store'
 import clsx from 'clsx'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  // { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }, // Dashboard 숨김
   { name: 'Robots', href: '/robots', icon: Bot },
   { name: 'Orders', href: '/orders', icon: ClipboardList },
   { name: 'Templates', href: '/templates', icon: FileText },
+  { name: 'Actions', href: '/actions', icon: Zap },
+  { name: 'Nodes', href: '/nodes', icon: MapPin }, // Nodes 메뉴 추가
+  { name: 'Edges', href: '/edges', icon: Target }, // Edges 메뉴 추가
 ]
 
 const secondaryNavigation = [
-  { name: 'System Status', href: '/system', icon: Activity },
-  { name: 'Transport', href: '/transport', icon: Zap },
-  { name: 'Database', href: '/database', icon: Database },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  // { name: 'System Status', href: '/system', icon: Activity }, 
+  // { name: 'Transport', href: '/transport', icon: Zap }, 
+  // { name: 'Database', href: '/database', icon: Database }, 
+  // { name: 'Settings', href: '/settings', icon: Settings }, 
 ]
 
 const Sidebar = () => {
@@ -111,42 +116,45 @@ const Sidebar = () => {
         </div>
 
         {/* Secondary Navigation */}
-        <div>
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            System
-          </h3>
-          <div className="mt-3 space-y-1">
-            {secondaryNavigation.map((item) => {
-              const isActive = location.pathname === item.href || 
-                location.pathname.startsWith(item.href)
-              
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={clsx(
-                    'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200',
-                    {
-                      'bg-primary-100 text-primary-700': isActive,
-                      'text-gray-700 hover:bg-gray-100 hover:text-gray-900': !isActive,
-                    }
-                  )}
-                >
-                  <item.icon
+        {/* secondaryNavigation 배열이 비어있으므로 이 섹션은 렌더링되지 않습니다. */}
+        {secondaryNavigation.length > 0 && (
+          <div>
+            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              System
+            </h3>
+            <div className="mt-3 space-y-1">
+              {secondaryNavigation.map((item) => {
+                const isActive = location.pathname === item.href || 
+                  location.pathname.startsWith(item.href)
+                
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
                     className={clsx(
-                      'flex-shrink-0 mr-3 h-5 w-5',
+                      'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200',
                       {
-                        'text-primary-500': isActive,
-                        'text-gray-400 group-hover:text-gray-500': !isActive,
+                        'bg-primary-100 text-primary-700': isActive,
+                        'text-gray-700 hover:bg-gray-100 hover:text-gray-900': !isActive,
                       }
                     )}
-                  />
-                  {item.name}
-                </Link>
-              )
-            })}
+                  >
+                    <item.icon
+                      className={clsx(
+                        'flex-shrink-0 mr-3 h-5 w-5',
+                        {
+                          'text-primary-500': isActive,
+                          'text-gray-400 group-hover:text-gray-500': !isActive,
+                        }
+                      )}
+                    />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* Footer */}

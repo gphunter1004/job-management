@@ -86,8 +86,8 @@ export const fetchOrderTemplates = createAsyncThunk(
   'orders/fetchOrderTemplates',
   async (params?: { limit?: number; offset?: number }, { rejectWithValue }) => {
     try {
-      const response = await ordersApi.getOrderTemplates(params)
-      return response
+      const response: any = await ordersApi.getOrderTemplates(params) // 응답 구조를 직접 참조하기 위해 'any'로 캐스팅
+      return response // 이 응답 객체에는 'templates'와 'count' 속성이 있습니다.
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch templates')
     }
@@ -253,7 +253,10 @@ const orderSlice = createSlice({
       })
       .addCase(fetchOrderTemplates.fulfilled, (state, action) => {
         state.templatesLoading = false
-        state.templates = action.payload.items
+        // 여기가 수정된 부분입니다: action.payload.items 대신 action.payload.templates를 사용합니다.
+        state.templates = Array.isArray(action.payload.templates) ? action.payload.templates : []
+        // total count도 API 응답의 `count`를 사용합니다.
+        state.pagination.total = action.payload.count; 
         state.error = null
       })
       .addCase(fetchOrderTemplates.rejected, (state, action) => {
@@ -310,7 +313,12 @@ const orderSlice = createSlice({
 
     // Delete order template
     builder
+      .addCase(deleteOrderTemplate.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(deleteOrderTemplate.fulfilled, (state, action) => {
+        state.isLoading = false
         const templateId = action.payload
         state.templates = state.templates.filter(template => template.id !== templateId)
         if (state.selectedTemplate?.id === templateId) {
@@ -318,6 +326,7 @@ const orderSlice = createSlice({
         }
       })
       .addCase(deleteOrderTemplate.rejected, (state, action) => {
+        state.isLoading = false
         state.error = action.payload as string
       })
   },

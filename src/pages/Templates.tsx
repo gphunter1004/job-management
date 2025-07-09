@@ -97,14 +97,13 @@ const Templates = () => {
 
   // Filter and sort templates with safety checks
   const filteredTemplates = safeTemplates
-    .filter(template => {
-      if (filters.search &&
-          !template.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-          !(template.description?.toLowerCase().includes(filters.search.toLowerCase()))) {
-        return false
-      }
-      return true
-    })
+    .filter(template => 
+      // Add this filter to ensure template and its essential properties are not undefined
+      template && typeof template.id === 'number' && typeof template.name === 'string' &&
+      (filters.search === '' || 
+       template.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+       (template.description?.toLowerCase().includes(filters.search.toLowerCase())))
+    )
     .sort((a, b) => {
       const direction = filters.sortOrder === 'asc' ? 1 : -1
       switch (filters.sortBy) {

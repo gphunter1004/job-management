@@ -137,12 +137,15 @@ const Robots = () => {
           >
             Refresh
           </Button>
+          {/* Connect Robot 버튼을 숨깁니다. */}
+          {/*
           <Button
             variant="primary"
             leftIcon={<Plus className="w-4 h-4" />}
           >
             Connect Robot
           </Button>
+          */}
         </div>
       </div>
 
@@ -278,7 +281,7 @@ const Robots = () => {
           </p>
           {connectedRobots.length === 0 && (
             <Button variant="primary">
-              Connect Robot
+              Connect Robot {/* 이 버튼도 숨겨져 있으므로 이 부분은 도달하지 않습니다. */}
             </Button>
           )}
         </Card>

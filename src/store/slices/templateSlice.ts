@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import type { OrderTemplate, NodeWithActions, EdgeWithActions } from '@/types/order'
 import { ordersApi } from '@/api/orders'
+import { OrderTemplate, NodeWithActions, EdgeWithActions } from '@/types/order'
 
 interface TemplatesState {
   templates: OrderTemplate[]
@@ -22,10 +22,15 @@ interface TemplatesState {
     sortBy: 'name' | 'createdAt' | 'updatedAt'
     sortOrder: 'asc' | 'desc'
   }
+  pagination: {
+    limit: number
+    offset: number
+    total: number
+  }
 }
 
 const initialState: TemplatesState = {
-  templates: [], // 빈 배열로 초기화
+  templates: [],
   templateDetails: {},
   selectedTemplate: null,
   selectedTemplateDetails: null,
@@ -36,21 +41,22 @@ const initialState: TemplatesState = {
     sortBy: 'createdAt',
     sortOrder: 'desc',
   },
+  pagination: {
+    limit: 10,
+    offset: 0,
+    total: 0,
+  },
 }
 
-// Async thunks
+// 비동기 Thunk
 export const fetchTemplates = createAsyncThunk(
   'templates/fetchTemplates',
   async (params?: { limit?: number; offset?: number }, { rejectWithValue }) => {
     try {
       const response = await ordersApi.getOrderTemplates(params)
-      // 응답이 배열인지 확인하고, 아니면 빈 배열 반환
-      const templates = response.items
-      return Array.isArray(templates) ? templates : []
+      return response 
     } catch (error: any) {
-      console.warn('Failed to fetch templates, using empty array:', error)
-      // API 실패 시에도 빈 배열 반환하여 오류 방지
-      return []
+      return rejectWithValue(error.response?.data?.message || '액션 템플릿 목록을 불러오지 못했습니다.')
     }
   }
 )
@@ -58,26 +64,32 @@ export const fetchTemplates = createAsyncThunk(
 export const fetchTemplateDetails = createAsyncThunk(
   'templates/fetchTemplateDetails',
   async (templateId: number, { rejectWithValue }) => {
+    console.log(`[fetchTemplateDetails Thunk] 호출됨 - ID: ${templateId}`);
     try {
-      const response = await ordersApi.getOrderTemplateWithDetails(templateId)
-      return { templateId, details: response.data }
-    } catch (error: any) {
-      console.warn('Failed to fetch template details, using mock data:', error)
-      // API 실패 시 모의 데이터 반환
+      const apiResponse = await ordersApi.getOrderTemplateWithDetails(templateId) 
+      
+      const actualData = apiResponse.data;
+
+      if (actualData === null || actualData === undefined) {
+        console.warn(`[fetchTemplateDetails Thunk] API 응답 데이터 (actualData)가 null/undefined:`, actualData);
+        throw new Error('템플릿 상세 정보 API 응답 데이터가 비어 있거나 올바르지 않습니다.');
+      }
+      console.log(`[fetchTemplateDetails Thunk] API 응답 데이터 수신 (actualData):`, actualData);
+
+      const mappedData = {
+        template: actualData.orderTemplate ?? null,
+        nodes: actualData.nodesWithActions ?? [],
+        edges: actualData.edgesWithActions ?? []
+      };
+      console.log(`[fetchTemplateDetails Thunk] 데이터 매핑 완료:`, mappedData);
+
       return {
         templateId,
-        details: {
-          template: {
-            id: templateId,
-            name: `Template ${templateId}`,
-            description: 'Mock template for development',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          nodes: [],
-          edges: []
-        }
-      }
+        details: mappedData
+      };
+    } catch (error: any) {
+      console.error(`[fetchTemplateDetails Thunk] 오류 발생:`, error);
+      return rejectWithValue(error.message || '템플릿 상세 정보를 불러오지 못했습니다.')
     }
   }
 )
@@ -96,10 +108,7 @@ export const createTemplate = createAsyncThunk(
 
 export const updateTemplate = createAsyncThunk(
   'templates/updateTemplate',
-  async ({ id, data }: { 
-    id: number
-    data: { name: string; description?: string; nodeIds?: string[]; edgeIds?: string[] }
-  }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: { name: string; description?: string; nodeIds?: string[]; edgeIds?: string[] } }, { rejectWithValue }) => {
     try {
       const response = await ordersApi.updateOrderTemplate(id, data)
       return response.data
@@ -251,7 +260,7 @@ const templateSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch templates
+    // fetchTemplates (목록 조회)
     builder
       .addCase(fetchTemplates.pending, (state) => {
         state.isLoading = true
@@ -259,24 +268,28 @@ const templateSlice = createSlice({
       })
       .addCase(fetchTemplates.fulfilled, (state, action) => {
         state.isLoading = false
-        // 항상 배열인지 확인
-        state.templates = Array.isArray(action.payload) ? action.payload : []
+        const templatesData = action.payload.data;
+        state.templates = Array.isArray(templatesData?.items) ? templatesData?.items : [] 
+        state.pagination.total = templatesData?.count ?? 0;
         state.error = null
+        // 로그 추가: Redux 상태가 어떻게 업데이트되었는지 확인
+        console.log('[templateSlice] fetchTemplates.fulfilled: state.templates updated to', state.templates);
+        console.log('[templateSlice] fetchTemplates.fulfilled: state.pagination.total updated to', state.pagination.total);
       })
       .addCase(fetchTemplates.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
-        // 실패해도 빈 배열 유지
-        state.templates = []
       })
 
-    // Fetch template details
+    // fetchTemplateDetails (상세 조회)
     builder
       .addCase(fetchTemplateDetails.pending, (state) => {
+        console.log('[fetchTemplateDetails Reducer] Pending 상태 진입');
         state.isLoading = true
         state.error = null
       })
       .addCase(fetchTemplateDetails.fulfilled, (state, action) => {
+        console.log('[fetchTemplateDetails Reducer] Fulfilled 상태 진입. Payload:', action.payload);
         state.isLoading = false
         const { templateId, details } = action.payload
         state.templateDetails[templateId] = details
@@ -284,11 +297,12 @@ const templateSlice = createSlice({
         state.error = null
       })
       .addCase(fetchTemplateDetails.rejected, (state, action) => {
+        console.error('[fetchTemplateDetails Reducer] Rejected 상태 진입. 오류:', action.payload);
         state.isLoading = false
         state.error = action.payload as string
       })
 
-    // Create template
+    // createTemplate (생성)
     builder
       .addCase(createTemplate.pending, (state) => {
         state.isLoading = true
@@ -296,7 +310,6 @@ const templateSlice = createSlice({
       })
       .addCase(createTemplate.fulfilled, (state, action) => {
         state.isLoading = false
-        // 안전한 배열 추가
         const currentTemplates = state.templates || []
         state.templates = [action.payload, ...currentTemplates]
         state.selectedTemplate = action.payload
@@ -307,7 +320,7 @@ const templateSlice = createSlice({
         state.error = action.payload as string
       })
 
-    // Update template
+    // updateTemplate (수정)
     builder
       .addCase(updateTemplate.pending, (state) => {
         state.isLoading = true
@@ -330,7 +343,7 @@ const templateSlice = createSlice({
         state.error = action.payload as string
       })
 
-    // Delete template
+    // deleteTemplate (삭제)
     builder
       .addCase(deleteTemplate.pending, (state) => {
         state.isLoading = true
@@ -353,7 +366,7 @@ const templateSlice = createSlice({
         state.error = action.payload as string
       })
 
-    // Duplicate template
+    // duplicateTemplate (복제)
     builder
       .addCase(duplicateTemplate.fulfilled, (state, action) => {
         const currentTemplates = state.templates || []
@@ -364,20 +377,18 @@ const templateSlice = createSlice({
         state.error = action.payload as string
       })
 
-    // Associate nodes
+    // associateNodesWithTemplate (노드 연결)
     builder
       .addCase(associateNodesWithTemplate.fulfilled, (state, action) => {
-        // Handle successful node association
         state.error = null
       })
       .addCase(associateNodesWithTemplate.rejected, (state, action) => {
         state.error = action.payload as string
       })
 
-    // Associate edges
+    // associateEdgesWithTemplate (엣지 연결)
     builder
       .addCase(associateEdgesWithTemplate.fulfilled, (state, action) => {
-        // Handle successful edge association
         state.error = null
       })
       .addCase(associateEdgesWithTemplate.rejected, (state, action) => {
