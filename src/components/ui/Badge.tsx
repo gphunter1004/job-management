@@ -29,14 +29,11 @@ const Badge = ({
         
         // Color variants
         {
-          // Default
-          'bg-gray-100 text-gray-800': variant === 'default',
+          // Default & Secondary
+          'bg-gray-100 text-gray-800': variant === 'default' || variant === 'secondary',
           
           // Primary
           'bg-primary-100 text-primary-800': variant === 'primary',
-          
-          // Secondary
-          'bg-gray-100 text-gray-800': variant === 'secondary',
           
           // Success
           'bg-success-100 text-success-800': variant === 'success',

@@ -7,10 +7,10 @@ import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/Loading'
 import DashboardOverview from '@/components/dashboard/DashboardOverview'
 import RobotStatusGrid from '@/components/dashboard/RobotStatusGrid'
-import OrderStatistics from '@/components/dashboard/OrderStatistics'
-import SystemHealth from '@/components/dashboard/SystemHealth'
-import RealtimeChart from '@/components/dashboard/RealtimeChart'
-import AlertPanel from '@/components/dashboard/AlertPanel'
+//import OrderStatistics from '@/components/dashboard/OrderStatistics'
+//import SystemHealth from '@/components/dashboard/SystemHealth'
+//import RealtimeChart from '@/components/dashboard/RealtimeChart'
+//import AlertPanel from '@/components/dashboard/AlertPanel'
 
 const Dashboard = () => {
   const dispatch = useAppDispatch()
