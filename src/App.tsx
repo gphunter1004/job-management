@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
 
 import Layout from '@/components/layout/Layout'
 import Dashboard from '@/pages/Dashboard'
@@ -12,21 +11,9 @@ import TemplateDetail from '@/pages/TemplateDetail'
 import Settings from '@/pages/Settings'
 import NotFound from '@/pages/NotFound'
 
-import { useWebSocket } from '@/hooks/useWebSocket'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 
 function App() {
-  const { connect, disconnect } = useWebSocket()
-
-  useEffect(() => {
-    // Connect to WebSocket on app start
-    connect()
-
-    return () => {
-      disconnect()
-    }
-  }, [connect, disconnect])
-
   // Main application routes - no auth required
   return (
     <ErrorBoundary>

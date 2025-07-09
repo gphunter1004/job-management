@@ -1,10 +1,8 @@
 import { useState, ReactNode } from 'react'
-import { Menu, X, Bell, Search, User, Settings, LogOut } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { X } from 'lucide-react'
 
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { useWebSocket } from '@/hooks/useWebSocket'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,8 +10,6 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { isConnected } = useWebSocket()
-  const location = useLocation()
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
@@ -51,22 +47,6 @@ const Layout = ({ children }: LayoutProps) => {
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {/* Connection status indicator */}
-              {!isConnected && (
-                <div className="mb-4 bg-warning-50 border border-warning-200 rounded-md p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <Bell className="h-5 w-5 text-warning-400" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-warning-700">
-                        Real-time connection lost. Some features may not work properly.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Main content */}
               {children}
             </div>

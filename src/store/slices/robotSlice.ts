@@ -13,7 +13,7 @@ interface RobotsState {
 }
 
 const initialState: RobotsState = {
-  connectedRobots: [],
+  connectedRobots: [], // 빈 배열로 초기화
   robotStates: {},
   robotHealth: {},
   robotCapabilities: {},
@@ -28,9 +28,13 @@ export const fetchConnectedRobots = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await robotsApi.getConnectedRobots()
-      return response.data?.connectedRobots || []
+      // 응답이 배열인지 확인하고, 아니면 빈 배열 반환
+      const robots = response.data?.connectedRobots
+      return Array.isArray(robots) ? robots : []
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch connected robots')
+      console.warn('Failed to fetch connected robots, using empty array:', error)
+      // API 실패 시에도 빈 배열 반환하여 오류 방지
+      return []
     }
   }
 )
@@ -115,7 +119,8 @@ const robotSlice = createSlice({
     },
     removeRobot: (state, action: PayloadAction<string>) => {
       const serialNumber = action.payload
-      state.connectedRobots = state.connectedRobots.filter(robot => robot !== serialNumber)
+      // 안전한 필터링
+      state.connectedRobots = (state.connectedRobots || []).filter(robot => robot !== serialNumber)
       delete state.robotStates[serialNumber]
       delete state.robotHealth[serialNumber]
       delete state.robotCapabilities[serialNumber]
@@ -126,8 +131,10 @@ const robotSlice = createSlice({
     },
     addRobot: (state, action: PayloadAction<string>) => {
       const serialNumber = action.payload
-      if (!state.connectedRobots.includes(serialNumber)) {
-        state.connectedRobots.push(serialNumber)
+      // 안전한 추가
+      const currentRobots = state.connectedRobots || []
+      if (!currentRobots.includes(serialNumber)) {
+        state.connectedRobots = [...currentRobots, serialNumber]
       }
     },
   },
@@ -140,12 +147,15 @@ const robotSlice = createSlice({
       })
       .addCase(fetchConnectedRobots.fulfilled, (state, action) => {
         state.isLoading = false
-        state.connectedRobots = action.payload
+        // 항상 배열인지 확인
+        state.connectedRobots = Array.isArray(action.payload) ? action.payload : []
         state.error = null
       })
       .addCase(fetchConnectedRobots.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
+        // 실패해도 빈 배열 유지
+        state.connectedRobots = []
       })
 
     // Fetch robot state

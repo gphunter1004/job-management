@@ -1,62 +1,4 @@
-// Async thunks
-export const fetchDashboardMetrics = createAsyncThunk(
-  'dashboard/fetchMetrics',
-  async (_, { rejectWithValue, getState }) => {
-    try {
-      const state = getState() as { dashboard: DashboardState }
-      const timeRange = state.dashboard.selectedTimeRange
-
-      // Calculate date range based on selected time
-      const endDate = new Date()
-      const startDate = new Date()
-      
-      switch (timeRange) {
-        case '1h':
-          startDate.setHours(startDate.getHours() - 1)
-          break
-        case '6h':
-          startDate.setHours(startDate.getHours() - 6)
-          break
-        case '24h':
-          startDate.setDate(startDate.getDate() - 1)
-          break
-        case '7d':
-          startDate.setDate(startDate.getDate() - 7)
-          break
-        case '30d':
-          startDate.setDate(startDate.getDate() - 30)
-          break
-      }
-
-      try {
-        // Try to fetch from API first
-        const orderStats = await ordersApi.getOrderStatistics({
-          dateFrom: startDate.toISOString(),
-          dateTo: endDate.toISOString(),
-        })
-
-        const metrics: DashboardMetrics = {
-          totalRobots: 0, // Will be populated from robot state
-          onlineRobots: 0, // Will be populated from robot state
-          offlineRobots: 0, // Will be populated from robot state
-          robotsWithErrors: 0, // Will be populated from robot state
-          averageBatteryLevel: 0, // Will be populated from robot state
-          totalOrders: orderStats.data?.totalOrders || 0,
-          activeOrders: orderStats.data?.activeOrders || 0,
-          completedOrders: orderStats.data?.completedOrders || 0,
-          failedOrders: orderStats.data?.failedOrders || 0,
-          orderSuccessRate: orderStats.data?.totalOrders > 0 
-            ? Math.round((orderStats.data?.completedOrders || 0) / orderStats.data.totalOrders * 100)
-            : 0,
-          averageOrderTime: orderStats.data?.averageExecutionTime || 0,
-          systemUptime: Date.now() - new Date('2024-01-01').getTime(),
-          lastUpdated: new Date().toISOString(),
-        }
-
-        return metrics
-      } catch (apiError) {
-        // If API fails, return mock data
-        console.warn('API notimport { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { ordersApi } from '@/api/orders'
 
 // Dashboard statistics interfaces
@@ -139,26 +81,81 @@ const initialState: DashboardState = {
 // Async thunks
 export const fetchDashboardMetrics = createAsyncThunk(
   'dashboard/fetchMetrics',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      // Mock metrics data since API is not ready
-      const metrics: DashboardMetrics = {
-        totalRobots: 0, // Will be populated from robot state
-        onlineRobots: 0, // Will be populated from robot state
-        offlineRobots: 0, // Will be populated from robot state
-        robotsWithErrors: 0, // Will be populated from robot state
-        averageBatteryLevel: 0, // Will be populated from robot state
-        totalOrders: 0,
-        activeOrders: 0,
-        completedOrders: 0,
-        failedOrders: 0,
-        orderSuccessRate: 0,
-        averageOrderTime: 0,
-        systemUptime: Date.now() - new Date('2024-01-01').getTime(),
-        lastUpdated: new Date().toISOString(),
+      const state = getState() as { dashboard: DashboardState }
+      const timeRange = state.dashboard.selectedTimeRange
+
+      // Calculate date range based on selected time
+      const endDate = new Date()
+      const startDate = new Date()
+      
+      switch (timeRange) {
+        case '1h':
+          startDate.setHours(startDate.getHours() - 1)
+          break
+        case '6h':
+          startDate.setHours(startDate.getHours() - 6)
+          break
+        case '24h':
+          startDate.setDate(startDate.getDate() - 1)
+          break
+        case '7d':
+          startDate.setDate(startDate.getDate() - 7)
+          break
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30)
+          break
       }
 
-      return metrics
+      try {
+        // Try to fetch from API first
+        const orderStats = await ordersApi.getOrderStatistics({
+          dateFrom: startDate.toISOString(),
+          dateTo: endDate.toISOString(),
+        })
+
+        const metrics: DashboardMetrics = {
+          totalRobots: 0, // Will be populated from robot state
+          onlineRobots: 0, // Will be populated from robot state
+          offlineRobots: 0, // Will be populated from robot state
+          robotsWithErrors: 0, // Will be populated from robot state
+          averageBatteryLevel: 0, // Will be populated from robot state
+          totalOrders: orderStats.data?.totalOrders || 0,
+          activeOrders: orderStats.data?.activeOrders || 0,
+          completedOrders: orderStats.data?.completedOrders || 0,
+          failedOrders: orderStats.data?.failedOrders || 0,
+          orderSuccessRate: orderStats.data?.totalOrders > 0 
+            ? Math.round((orderStats.data?.completedOrders || 0) / orderStats.data.totalOrders * 100)
+            : 0,
+          averageOrderTime: orderStats.data?.averageExecutionTime || 0,
+          systemUptime: Date.now() - new Date('2024-01-01').getTime(),
+          lastUpdated: new Date().toISOString(),
+        }
+
+        return metrics
+      } catch (apiError) {
+        // If API fails, return mock data
+        console.warn('API not available, using mock data')
+        
+        const metrics: DashboardMetrics = {
+          totalRobots: 0, // Will be populated from robot state
+          onlineRobots: 0, // Will be populated from robot state
+          offlineRobots: 0, // Will be populated from robot state
+          robotsWithErrors: 0, // Will be populated from robot state
+          averageBatteryLevel: 0, // Will be populated from robot state
+          totalOrders: 0,
+          activeOrders: 0,
+          completedOrders: 0,
+          failedOrders: 0,
+          orderSuccessRate: 0,
+          averageOrderTime: 0,
+          systemUptime: Date.now() - new Date('2024-01-01').getTime(),
+          lastUpdated: new Date().toISOString(),
+        }
+
+        return metrics
+      }
     } catch (error: any) {
       return rejectWithValue('Failed to fetch dashboard metrics')
     }

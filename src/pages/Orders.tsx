@@ -27,6 +27,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import LoadingSpinner from '@/components/ui/Loading'
 import SearchBar from '@/components/common/SearchBar'
+import CreateOrderModal from '@/components/orders/CreateOrderModal'
 import { OrderStatus } from '@/types/order'
 
 const Orders = () => {
@@ -38,14 +39,17 @@ const Orders = () => {
     templatesLoading,
     error 
   } = useAppSelector(state => state.orders)
-  const { connectedRobots } = useAppSelector(state => state.robots)
+  const { connectedRobots, robotHealth } = useAppSelector(state => state.robots)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [robotFilter, setRobotFilter] = useState<string>('all')
   const [showExecuteModal, setShowExecuteModal] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
-  const [selectedRobot, setSelectedRobot] = useState<string>('')
+
+  // 안전한 배열 처리
+  const safeConnectedRobots = connectedRobots || []
+  const safeOrders = orders || []
+  const safeTemplates = templates || []
 
   useEffect(() => {
     dispatch(fetchOrderExecutions())
@@ -57,27 +61,24 @@ const Orders = () => {
     dispatch(fetchOrderTemplates())
   }
 
-  const handleExecuteOrder = async () => {
-    if (selectedTemplate && selectedRobot) {
-      try {
-        await dispatch(executeOrder({
-          templateId: selectedTemplate,
-          serialNumber: selectedRobot
-        }))
-        setShowExecuteModal(false)
-        setSelectedTemplate(null)
-        setSelectedRobot('')
-        dispatch(fetchOrderExecutions()) // Refresh orders
-      } catch (error) {
-        console.error('Failed to execute order:', error)
-      }
+  const handleExecuteOrder = async (templateId: number, serialNumber: string) => {
+    try {
+      await dispatch(executeOrder({
+        templateId,
+        serialNumber
+      })).unwrap()
+      setShowExecuteModal(false)
+      dispatch(fetchOrderExecutions()) // Refresh orders
+    } catch (error) {
+      console.error('Failed to execute order:', error)
+      throw error // Re-throw for modal to handle
     }
   }
 
   const handleCancelOrder = async (orderId: string) => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
       try {
-        await dispatch(cancelOrder(orderId))
+        await dispatch(cancelOrder(orderId)).unwrap()
         dispatch(fetchOrderExecutions()) // Refresh orders
       } catch (error) {
         console.error('Failed to cancel order:', error)
@@ -122,7 +123,7 @@ const Orders = () => {
     }
   }
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = safeOrders.filter(order => {
     // Search filter
     if (searchTerm && !order.orderId.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false
@@ -142,13 +143,13 @@ const Orders = () => {
   })
 
   const stats = {
-    total: orders.length,
-    active: orders.filter(o => [OrderStatus.CREATED, OrderStatus.SENT, OrderStatus.EXECUTING].includes(o.status)).length,
-    completed: orders.filter(o => o.status === OrderStatus.COMPLETED).length,
-    failed: orders.filter(o => o.status === OrderStatus.FAILED).length,
+    total: safeOrders.length,
+    active: safeOrders.filter(o => [OrderStatus.CREATED, OrderStatus.SENT, OrderStatus.EXECUTING].includes(o.status)).length,
+    completed: safeOrders.filter(o => o.status === OrderStatus.COMPLETED).length,
+    failed: safeOrders.filter(o => o.status === OrderStatus.FAILED).length,
   }
 
-  if (isLoading && orders.length === 0) {
+  if (isLoading && safeOrders.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" text="Loading orders..." />
@@ -259,7 +260,7 @@ const Orders = () => {
               className="form-input"
             >
               <option value="all">All Robots</option>
-              {connectedRobots.map(robot => (
+              {safeConnectedRobots.map(robot => (
                 <option key={robot} value={robot}>{robot}</option>
               ))}
             </select>
@@ -282,15 +283,15 @@ const Orders = () => {
         <Card className="p-12 text-center">
           <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {orders.length === 0 ? 'No orders found' : 'No orders match your filters'}
+            {safeOrders.length === 0 ? 'No orders found' : 'No orders match your filters'}
           </h3>
           <p className="text-gray-500 mb-6">
-            {orders.length === 0 
+            {safeOrders.length === 0 
               ? 'Execute your first order to get started.'
               : 'Try adjusting your search or filter criteria.'
             }
           </p>
-          {orders.length === 0 && (
+          {safeOrders.length === 0 && (
             <Button 
               variant="primary"
               onClick={() => setShowExecuteModal(true)}
@@ -316,7 +317,7 @@ const Orders = () => {
               </thead>
               <tbody className="table-body">
                 {filteredOrders.map((order) => {
-                  const template = templates.find(t => t.id === order.orderTemplateId)
+                  const template = safeTemplates.find(t => t.id === order.orderTemplateId)
                   const duration = order.startedAt && order.completedAt 
                     ? Math.round((new Date(order.completedAt).getTime() - new Date(order.startedAt).getTime()) / 1000)
                     : null
@@ -398,75 +399,21 @@ const Orders = () => {
         </Card>
       )}
 
-      {/* Execute Order Modal */}
-      {showExecuteModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Execute Order</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="form-label">Select Template</label>
-                <select
-                  value={selectedTemplate || ''}
-                  onChange={(e) => setSelectedTemplate(Number(e.target.value))}
-                  className="form-input"
-                  disabled={templatesLoading}
-                >
-                  <option value="">Choose a template...</option>
-                  {templates.map(template => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="form-label">Select Robot</label>
-                <select
-                  value={selectedRobot}
-                  onChange={(e) => setSelectedRobot(e.target.value)}
-                  className="form-input"
-                >
-                  <option value="">Choose a robot...</option>
-                  {connectedRobots.map(robot => (
-                    <option key={robot} value={robot}>
-                      {robot}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowExecuteModal(false)
-                  setSelectedTemplate(null)
-                  setSelectedRobot('')
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleExecuteOrder}
-                disabled={!selectedTemplate || !selectedRobot}
-                loading={isLoading}
-              >
-                Execute
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Execute Order Modal */}
+      <CreateOrderModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        onExecute={handleExecuteOrder}
+        templates={safeTemplates}
+        connectedRobots={safeConnectedRobots}
+        robotHealth={robotHealth || {}}
+        isLoading={isLoading}
+      />
 
       {/* Results count */}
       {filteredOrders.length > 0 && (
         <div className="text-center text-sm text-gray-500">
-          Showing {filteredOrders.length} of {orders.length} orders
+          Showing {filteredOrders.length} of {safeOrders.length} orders
         </div>
       )}
     </div>

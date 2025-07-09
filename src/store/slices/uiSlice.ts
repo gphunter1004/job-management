@@ -128,7 +128,6 @@ const initialState: UIState = {
   screenWidth: 1920,
   screenHeight: 1080,
   features: {
-    webSocketEnabled: true,
     notificationsEnabled: true,
     analyticsEnabled: false,
     debugMode: false,

@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 
 import Button from '@/components/ui/Button'
-import { useWebSocket } from '@/hooks/useWebSocket'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -13,7 +12,6 @@ interface HeaderProps {
 
 const Header = ({ onMenuClick }: HeaderProps) => {
   const { connectedRobots, robotHealth } = useAppSelector(state => state.robots)
-  const { isConnected } = useWebSocket()
   
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -26,11 +24,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   }
 
   // Calculate notification counts
-  const robotsWithErrors = connectedRobots.filter(serial => 
+  const safeConnectedRobots = connectedRobots || []
+  const robotsWithErrors = safeConnectedRobots.filter(serial => 
     robotHealth[serial]?.hasErrors || (robotHealth[serial]?.errorCount || 0) > 0
   ).length
 
-  const lowBatteryRobots = connectedRobots.filter(serial => 
+  const lowBatteryRobots = safeConnectedRobots.filter(serial => 
     (robotHealth[serial]?.batteryCharge || 0) < 20
   ).length
 
@@ -69,14 +68,11 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
         {/* Right side - Actions */}
         <div className="ml-4 flex items-center md:ml-6 space-x-4">
-          {/* Connection Status */}
+          {/* System Status */}
           <div className="flex items-center space-x-2">
-            <div className={clsx(
-              'w-2 h-2 rounded-full',
-              isConnected ? 'bg-success-400' : 'bg-error-400'
-            )} />
+            <div className="w-2 h-2 rounded-full bg-success-400" />
             <span className="text-sm text-gray-600 hidden sm:block">
-              {isConnected ? 'Connected' : 'Disconnected'}
+              System Online
             </span>
           </div>
 

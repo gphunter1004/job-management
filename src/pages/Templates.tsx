@@ -38,6 +38,9 @@ const Templates = () => {
   const [newTemplateName, setNewTemplateName] = useState('')
   const [newTemplateDescription, setNewTemplateDescription] = useState('')
 
+  // 안전한 배열 처리
+  const safeTemplates = templates || []
+
   useEffect(() => {
     dispatch(fetchTemplates())
   }, [dispatch])
@@ -52,7 +55,7 @@ const Templates = () => {
         await dispatch(createTemplate({
           name: newTemplateName.trim(),
           description: newTemplateDescription.trim() || undefined
-        }))
+        })).unwrap()
         setShowCreateModal(false)
         setNewTemplateName('')
         setNewTemplateDescription('')
@@ -66,7 +69,7 @@ const Templates = () => {
     const newName = prompt(`Enter name for duplicated template:`, `Copy of ${originalName}`)
     if (newName) {
       try {
-        await dispatch(duplicateTemplate({ templateId, newName }))
+        await dispatch(duplicateTemplate({ templateId, newName })).unwrap()
       } catch (error) {
         console.error('Failed to duplicate template:', error)
       }
@@ -76,7 +79,7 @@ const Templates = () => {
   const handleDeleteTemplate = async (templateId: number, templateName: string) => {
     if (window.confirm(`Are you sure you want to delete template "${templateName}"? This action cannot be undone.`)) {
       try {
-        await dispatch(deleteTemplate(templateId))
+        await dispatch(deleteTemplate(templateId)).unwrap()
       } catch (error) {
         console.error('Failed to delete template:', error)
       }
@@ -92,12 +95,12 @@ const Templates = () => {
     dispatch(setFilters({ sortBy, sortOrder }))
   }
 
-  // Filter and sort templates
-  const filteredTemplates = templates
+  // Filter and sort templates with safety checks
+  const filteredTemplates = safeTemplates
     .filter(template => {
       if (filters.search &&
           !template.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-          !template.description?.toLowerCase().includes(filters.search.toLowerCase())) {
+          !(template.description?.toLowerCase().includes(filters.search.toLowerCase()))) {
         return false
       }
       return true
@@ -115,7 +118,7 @@ const Templates = () => {
       }
     })
 
-  if (isLoading && templates.length === 0) {
+  if (isLoading && safeTemplates.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" text="Loading templates..." />
@@ -158,12 +161,12 @@ const Templates = () => {
           <div>
             <h3 className="text-lg font-medium text-gray-900">Template Overview</h3>
             <p className="text-sm text-gray-600">
-              {templates.length} template{templates.length !== 1 ? 's' : ''} available
+              {safeTemplates.length} template{safeTemplates.length !== 1 ? 's' : ''} available
             </p>
           </div>
           <div className="flex items-center space-x-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{templates.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{safeTemplates.length}</p>
               <p className="text-sm text-gray-500">Total Templates</p>
             </div>
           </div>
@@ -185,7 +188,7 @@ const Templates = () => {
             <span className="text-sm text-gray-500">Sort by:</span>
             <button
               onClick={() => handleSortChange('name')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 filters.sortBy === 'name'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-500 hover:text-gray-700'
@@ -195,7 +198,7 @@ const Templates = () => {
             </button>
             <button
               onClick={() => handleSortChange('createdAt')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 filters.sortBy === 'createdAt'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-500 hover:text-gray-700'
@@ -205,7 +208,7 @@ const Templates = () => {
             </button>
             <button
               onClick={() => handleSortChange('updatedAt')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 filters.sortBy === 'updatedAt'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-500 hover:text-gray-700'
@@ -232,15 +235,15 @@ const Templates = () => {
         <Card className="p-12 text-center">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {templates.length === 0 ? 'No templates found' : 'No templates match your search'}
+            {safeTemplates.length === 0 ? 'No templates found' : 'No templates match your search'}
           </h3>
           <p className="text-gray-500 mb-6">
-            {templates.length === 0 
+            {safeTemplates.length === 0 
               ? 'Create your first template to get started.'
               : 'Try adjusting your search criteria.'
             }
           </p>
-          {templates.length === 0 && (
+          {safeTemplates.length === 0 && (
             <Button 
               variant="primary"
               onClick={() => setShowCreateModal(true)}
@@ -370,9 +373,9 @@ const Templates = () => {
       )}
 
       {/* Results count */}
-      {filteredTemplates.length > 0 && templates.length > filteredTemplates.length && (
+      {filteredTemplates.length > 0 && safeTemplates.length > filteredTemplates.length && (
         <div className="text-center text-sm text-gray-500">
-          Showing {filteredTemplates.length} of {templates.length} templates
+          Showing {filteredTemplates.length} of {safeTemplates.length} templates
         </div>
       )}
     </div>

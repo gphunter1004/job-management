@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppSelector, useAppDispatch } from '@/store'
 import { fetchConnectedRobots } from '@/store/slices/robotSlice'
-import { Activity, Cpu, Zap, AlertCircle, TrendingUp, Clock, Bot, ClipboardList } from 'lucide-react'
+import { Activity, Cpu, Zap, AlertCircle, TrendingUp, Clock, Bot, ClipboardList, FileText, Settings } from 'lucide-react'
 
 import Card from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/Loading'
 import DashboardOverview from '@/components/dashboard/DashboardOverview'
 import RobotStatusGrid from '@/components/dashboard/RobotStatusGrid'
@@ -13,10 +15,9 @@ import RealtimeChart from '@/components/dashboard/RealtimeChart'
 import AlertPanel from '@/components/dashboard/AlertPanel'
 
 const Dashboard = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { connectedRobots, robotStates, robotHealth, isLoading } = useAppSelector(state => state.robots)
-  
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Initial data fetch
@@ -27,32 +28,40 @@ const Dashboard = () => {
       dispatch(fetchConnectedRobots())
     }, 30000)
 
-    setRefreshInterval(interval)
-
     return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval)
-      }
-      if (interval) {
-        clearInterval(interval)
-      }
+      clearInterval(interval)
     }
   }, [dispatch])
 
-  // Calculate metrics
-  const totalRobots = connectedRobots.length
-  const onlineRobots = connectedRobots.filter(serial => 
+  // Calculate metrics with safety checks
+  const safeConnectedRobots = connectedRobots || []
+  const totalRobots = safeConnectedRobots.length
+  const onlineRobots = safeConnectedRobots.filter(serial => 
     robotStates[serial]?.manufacturer && robotHealth[serial]?.isOnline
   ).length
-  const robotsWithErrors = connectedRobots.filter(serial => 
+  const robotsWithErrors = safeConnectedRobots.filter(serial => 
     robotHealth[serial]?.hasErrors || (robotHealth[serial]?.errorCount || 0) > 0
   ).length
-  const averageBatteryLevel = connectedRobots.length > 0 
-    ? Math.round(connectedRobots.reduce((sum, serial) => 
-        sum + (robotHealth[serial]?.batteryCharge || 0), 0) / connectedRobots.length)
+  const averageBatteryLevel = safeConnectedRobots.length > 0 
+    ? Math.round(safeConnectedRobots.reduce((sum, serial) => 
+        sum + (robotHealth[serial]?.batteryCharge || 0), 0) / safeConnectedRobots.length)
     : 0
 
-  if (isLoading && connectedRobots.length === 0) {
+  // Quick action handlers
+  const handleCreateNewOrder = () => {
+    navigate('/orders')
+  }
+
+  const handleManageTemplates = () => {
+    navigate('/templates')
+  }
+
+  const handleViewReports = () => {
+    // For now, navigate to orders page with a filter or create a reports page later
+    navigate('/orders')
+  }
+
+  if (isLoading && safeConnectedRobots.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" />
@@ -78,7 +87,7 @@ const Dashboard = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-6">
+        <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/robots')}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Activity className="w-8 h-8 text-primary-600" />
@@ -94,7 +103,7 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/robots')}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Cpu className="w-8 h-8 text-success-600" />
@@ -110,7 +119,7 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/robots')}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Zap className="w-8 h-8 text-warning-600" />
@@ -126,7 +135,7 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/robots')}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <AlertCircle className={`w-8 h-8 ${robotsWithErrors > 0 ? 'text-error-600' : 'text-gray-400'}`} />
@@ -156,7 +165,7 @@ const Dashboard = () => {
           />
 
           {/* Robot Status Grid */}
-          <RobotStatusGrid robots={connectedRobots} />
+          <RobotStatusGrid robots={safeConnectedRobots} />
 
           {/* Real-time Charts */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -166,7 +175,7 @@ const Dashboard = () => {
               </h3>
               <RealtimeChart 
                 type="battery"
-                data={connectedRobots.map(serial => ({
+                data={safeConnectedRobots.map(serial => ({
                   label: serial,
                   value: robotHealth[serial]?.batteryCharge || 0
                 }))}
@@ -206,15 +215,30 @@ const Dashboard = () => {
               Quick Actions
             </h3>
             <div className="space-y-3">
-              <button className="w-full btn btn-primary">
+              <Button 
+                variant="primary" 
+                fullWidth
+                leftIcon={<ClipboardList className="w-4 h-4" />}
+                onClick={handleCreateNewOrder}
+              >
                 Create New Order
-              </button>
-              <button className="w-full btn btn-outline">
+              </Button>
+              <Button 
+                variant="outline" 
+                fullWidth
+                leftIcon={<FileText className="w-4 h-4" />}
+                onClick={handleManageTemplates}
+              >
                 Manage Templates
-              </button>
-              <button className="w-full btn btn-outline">
+              </Button>
+              <Button 
+                variant="outline" 
+                fullWidth
+                leftIcon={<TrendingUp className="w-4 h-4" />}
+                onClick={handleViewReports}
+              >
                 View Reports
-              </button>
+              </Button>
             </div>
           </Card>
 
