@@ -1,7 +1,5 @@
 import { useState, ReactNode } from 'react'
 import { Menu, X, Bell, Search, User, Settings, LogOut } from 'lucide-react'
-import { useAppSelector, useAppDispatch } from '@/store'
-import { logout } from '@/store/slices/authSlice'
 import { Link, useLocation } from 'react-router-dom'
 
 import Sidebar from './Sidebar'
@@ -14,14 +12,8 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { user } = useAppSelector(state => state.auth)
   const { isConnected } = useWebSocket()
-  const dispatch = useAppDispatch()
   const location = useLocation()
-
-  const handleLogout = () => {
-    dispatch(logout())
-  }
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">

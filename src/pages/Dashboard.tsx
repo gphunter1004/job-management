@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useAppSelector, useAppDispatch } from '@/store'
 import { fetchConnectedRobots } from '@/store/slices/robotSlice'
-import { Activity, Cpu, Zap, AlertCircle, TrendingUp, Clock } from 'lucide-react'
+import { Activity, Cpu, Zap, AlertCircle, TrendingUp, Clock, Bot, ClipboardList } from 'lucide-react'
 
 import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/Loading'
 import DashboardOverview from '@/components/dashboard/DashboardOverview'
 import RobotStatusGrid from '@/components/dashboard/RobotStatusGrid'
-//import OrderStatistics from '@/components/dashboard/OrderStatistics'
-//import SystemHealth from '@/components/dashboard/SystemHealth'
-//import RealtimeChart from '@/components/dashboard/RealtimeChart'
-//import AlertPanel from '@/components/dashboard/AlertPanel'
+import OrderStatistics from '@/components/dashboard/OrderStatistics'
+import SystemHealth from '@/components/dashboard/SystemHealth'
+import RealtimeChart from '@/components/dashboard/RealtimeChart'
+import AlertPanel from '@/components/dashboard/AlertPanel'
 
 const Dashboard = () => {
   const dispatch = useAppDispatch()
   const { connectedRobots, robotStates, robotHealth, isLoading } = useAppSelector(state => state.robots)
-  const { user } = useAppSelector(state => state.auth)
   
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
 
@@ -68,7 +67,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">
-            Welcome back, {user?.firstName || user?.username}! Here's what's happening with your robots.
+            Welcome back! Here's what's happening with your robots.
           </p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -171,6 +170,7 @@ const Dashboard = () => {
                   label: serial,
                   value: robotHealth[serial]?.batteryCharge || 0
                 }))}
+                maxItems={8}
               />
             </Card>
 
@@ -227,21 +227,21 @@ const Dashboard = () => {
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-success-500 rounded-full"></div>
                 <div className="flex-1 text-sm">
-                  <p className="text-gray-900">Robot R001 completed order</p>
+                  <p className="text-gray-900">System started successfully</p>
                   <p className="text-gray-500">2 minutes ago</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
                 <div className="flex-1 text-sm">
-                  <p className="text-gray-900">Low battery alert for R003</p>
+                  <p className="text-gray-900">Dashboard loaded</p>
                   <p className="text-gray-500">5 minutes ago</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
                 <div className="flex-1 text-sm">
-                  <p className="text-gray-900">New order template created</p>
+                  <p className="text-gray-900">WebSocket connected</p>
                   <p className="text-gray-500">10 minutes ago</p>
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Menu, Bell, Search, User, Settings, LogOut, ChevronDown } from 'lucide-react'
-import { useAppSelector, useAppDispatch } from '@/store'
-import { logout } from '@/store/slices/authSlice'
+import { useAppSelector } from '@/store'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 
@@ -13,16 +12,17 @@ interface HeaderProps {
 }
 
 const Header = ({ onMenuClick }: HeaderProps) => {
-  const dispatch = useAppDispatch()
-  const { user } = useAppSelector(state => state.auth)
   const { connectedRobots, robotHealth } = useAppSelector(state => state.robots)
   const { isConnected } = useWebSocket()
   
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
 
-  const handleLogout = () => {
-    dispatch(logout())
+  // Mock user data since we're not using auth
+  const mockUser = {
+    name: 'Demo User',
+    email: 'demo@robotdashboard.com',
+    role: 'operator'
   }
 
   // Calculate notification counts
@@ -166,21 +166,13 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center">
-                  {user?.avatar ? (
-                    <img 
-                      className="h-8 w-8 rounded-full" 
-                      src={user.avatar} 
-                      alt={user.firstName || user.username} 
-                    />
-                  ) : (
-                    <User className="h-5 w-5 text-white" />
-                  )}
+                  <User className="h-5 w-5 text-white" />
                 </div>
                 <div className="hidden md:block text-left">
                   <div className="text-sm font-medium text-gray-900">
-                    {user?.firstName || user?.username}
+                    {mockUser.name}
                   </div>
-                  <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
+                  <div className="text-xs text-gray-500 capitalize">{mockUser.role}</div>
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
@@ -192,9 +184,9 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 <div className="py-1">
                   <div className="px-4 py-2 border-b border-gray-200">
                     <p className="text-sm font-medium text-gray-900">
-                      {user?.firstName} {user?.lastName}
+                      {mockUser.name}
                     </p>
-                    <p className="text-xs text-gray-500">{user?.email}</p>
+                    <p className="text-xs text-gray-500">{mockUser.email}</p>
                   </div>
                   
                   <Link
@@ -219,7 +211,8 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                     <button
                       onClick={() => {
                         setShowUserMenu(false)
-                        handleLogout()
+                        // Mock logout - just reload the page
+                        window.location.reload()
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >

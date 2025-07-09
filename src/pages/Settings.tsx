@@ -17,8 +17,23 @@ import Button from '@/components/ui/Button'
 
 const Settings = () => {
   const dispatch = useAppDispatch()
-  const { user } = useAppSelector(state => state.auth)
   const { preferences, theme } = useAppSelector(state => state.ui)
+  
+  // Mock user data since we're not using auth
+  const mockUser = {
+    firstName: 'Demo',
+    lastName: 'User',
+    email: 'demo@robotdashboard.com',
+    username: 'demo-user',
+    role: 'operator',
+    permissions: [
+      { name: 'View Robots', resource: 'robot', action: 'read' },
+      { name: 'Control Robots', resource: 'robot', action: 'execute' },
+      { name: 'View Orders', resource: 'order', action: 'read' },
+      { name: 'Create Orders', resource: 'order', action: 'create' },
+    ],
+    lastLoginAt: new Date().toISOString()
+  }
   
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'appearance' | 'system' | 'security'>('profile')
   const [unsavedChanges, setUnsavedChanges] = useState(false)
@@ -143,7 +158,7 @@ const Settings = () => {
                   <label className="form-label">Email Address</label>
                   <input
                     type="email"
-                    value={user?.email || ''}
+                    value={mockUser?.email || ''}
                     className="form-input"
                     readOnly
                   />
@@ -153,7 +168,7 @@ const Settings = () => {
                   <label className="form-label">Username</label>
                   <input
                     type="text"
-                    value={user?.username || ''}
+                    value={mockUser?.username || ''}
                     className="form-input"
                     readOnly
                   />
@@ -163,7 +178,7 @@ const Settings = () => {
                   <label className="form-label">Role</label>
                   <input
                     type="text"
-                    value={user?.role || ''}
+                    value={mockUser?.role || ''}
                     className="form-input capitalize"
                     readOnly
                   />
@@ -416,16 +431,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">User:</span>
-                        <span className="text-gray-900">{user?.username}</span>
+                        <span className="text-gray-900">{mockUser?.username}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Role:</span>
-                        <span className="text-gray-900 capitalize">{user?.role}</span>
+                        <span className="text-gray-900 capitalize">{mockUser?.role}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Last Login:</span>
                         <span className="text-gray-900">
-                          {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'N/A'}
+                          {mockUser?.lastLoginAt ? new Date(mockUser.lastLoginAt).toLocaleString() : 'N/A'}
                         </span>
                       </div>
                     </div>
@@ -436,7 +451,7 @@ const Settings = () => {
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Permissions</h4>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {user?.permissions?.map((permission, index) => (
+                      {mockUser?.permissions?.map((permission, index) => (
                         <div key={index} className="flex items-center text-sm">
                           <div className="w-2 h-2 bg-success-400 rounded-full mr-2"></div>
                           <span className="text-gray-700">{permission.name}</span>
