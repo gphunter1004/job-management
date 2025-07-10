@@ -11,7 +11,7 @@ import Select from '@/components/ui/Select'
 import { useAppSelector, useAppDispatch } from '@/store'
 import { fetchNodes, createNode, updateNode, deleteNode, fetchNodeById, setSelectedNode } from '@/store/slices/nodeSlice'
 import { NodeTemplate, NodePosition, ActionTemplate } from '@/types/order'
-import { CreateNodeRequestFlat } from '@/api/nodes'
+import { generatePseudoUUID } from '@/utils/idGenerator' 
 
 const Nodes = () => {
   const dispatch = useAppDispatch()
@@ -26,25 +26,25 @@ const Nodes = () => {
     position: NodePosition, 
     actions: ActionTemplate[] 
   }>({
-    nodeId: '',
+    nodeId: generatePseudoUUID(), 
     name: '',
     description: '',
-    sequenceId: 1,
+    sequenceId: 0,
     released: false,
-    x: 0,
-    y: 0,
-    theta: 0,
-    allowedDeviationXY: 0.1,
-    allowedDeviationTheta: 0.1,
-    mapId: 'default_map',
+    x: 0.0,
+    y: 0.0,
+    theta: 0.0,
+    allowedDeviationXY: 0.0,
+    allowedDeviationTheta: 0.0,
+    mapId: '',
     actionTemplateIds: '[]',
     position: {
-      x: 0,
-      y: 0,
-      theta: 0,
-      allowedDeviationXY: 0.1,
-      allowedDeviationTheta: 0.1,
-      mapId: 'default_map'
+      x: 0.0,
+      y: 0.0,
+      theta: 0.0,
+      allowedDeviationXY: 0.0,
+      allowedDeviationTheta: 0.0,
+      mapId: ''
     },
     actions: []
   })
@@ -165,25 +165,25 @@ const Nodes = () => {
   const resetForm = () => {
     console.log('[Nodes 페이지] 폼 리셋')
     setCurrentNode({
-      nodeId: '', 
+      nodeId: generatePseudoUUID(), 
       name: '', 
       description: '', 
-      sequenceId: 1, 
+      sequenceId: 0, 
       released: false,
-      x: 0,
-      y: 0,
-      theta: 0,
-      allowedDeviationXY: 0.1,
-      allowedDeviationTheta: 0.1,
-      mapId: 'default_map',
+      x: 0.0,
+      y: 0.0,
+      theta: 0.0,
+      allowedDeviationXY: 0.0,
+      allowedDeviationTheta: 0.0,
+      mapId: '',
       actionTemplateIds: '[]',
       position: { 
-        x: 0, 
-        y: 0, 
-        theta: 0, 
-        allowedDeviationXY: 0.1, 
-        allowedDeviationTheta: 0.1, 
-        mapId: 'default_map' 
+        x: 0.0, 
+        y: 0.0, 
+        theta: 0.0, 
+        allowedDeviationXY: 0.0, 
+        allowedDeviationTheta: 0.0, 
+        mapId: '' 
       },
       actions: []
     })
@@ -200,7 +200,7 @@ const Nodes = () => {
         { 
           actionType: '', 
           actionId: '', 
-          blockingType: 'HARD', 
+          blockingType: 'NONE', 
           actionDescription: '', 
           parameters: [], 
           id: Date.now(), 
@@ -348,7 +348,7 @@ const Nodes = () => {
                   <input
                     type="number"
                     value={currentNode.sequenceId}
-                    onChange={(e) => setCurrentNode(prev => ({ ...prev, sequenceId: parseInt(e.target.value) || 1 }))}
+                    onChange={(e) => setCurrentNode(prev => ({ ...prev, sequenceId: parseInt(e.target.value) || 0 }))}
                     className="form-input"
                     min="1"
                   />
@@ -379,8 +379,8 @@ const Nodes = () => {
                       value={currentNode.position.x}
                       onChange={(e) => setCurrentNode(prev => ({ 
                         ...prev, 
-                        position: { ...prev.position, x: parseFloat(e.target.value) || 0 },
-                        x: parseFloat(e.target.value) || 0
+                        position: { ...prev.position, x: parseFloat(e.target.value) || 0.0 },
+                        x: parseFloat(e.target.value) || 0.0
                       }))}
                       className="form-input"
                     />
@@ -393,8 +393,8 @@ const Nodes = () => {
                       value={currentNode.position.y}
                       onChange={(e) => setCurrentNode(prev => ({ 
                         ...prev, 
-                        position: { ...prev.position, y: parseFloat(e.target.value) || 0 },
-                        y: parseFloat(e.target.value) || 0
+                        position: { ...prev.position, y: parseFloat(e.target.value) || 0.0 },
+                        y: parseFloat(e.target.value) || 0.0
                       }))}
                       className="form-input"
                     />
@@ -407,8 +407,8 @@ const Nodes = () => {
                       value={currentNode.position.theta}
                       onChange={(e) => setCurrentNode(prev => ({ 
                         ...prev, 
-                        position: { ...prev.position, theta: parseFloat(e.target.value) || 0 },
-                        theta: parseFloat(e.target.value) || 0
+                        position: { ...prev.position, theta: parseFloat(e.target.value) || 0.0 },
+                        theta: parseFloat(e.target.value) || 0.0
                       }))}
                       className="form-input"
                     />
@@ -423,8 +423,8 @@ const Nodes = () => {
                       value={currentNode.position.allowedDeviationXY}
                       onChange={(e) => setCurrentNode(prev => ({ 
                         ...prev, 
-                        position: { ...prev.position, allowedDeviationXY: parseFloat(e.target.value) || 0 },
-                        allowedDeviationXY: parseFloat(e.target.value) || 0
+                        position: { ...prev.position, allowedDeviationXY: parseFloat(e.target.value) || 0.0 },
+                        allowedDeviationXY: parseFloat(e.target.value) || 0.0
                       }))}
                       className="form-input"
                     />
@@ -437,8 +437,8 @@ const Nodes = () => {
                       value={currentNode.position.allowedDeviationTheta}
                       onChange={(e) => setCurrentNode(prev => ({ 
                         ...prev, 
-                        position: { ...prev.position, allowedDeviationTheta: parseFloat(e.target.value) || 0 },
-                        allowedDeviationTheta: parseFloat(e.target.value) || 0
+                        position: { ...prev.position, allowedDeviationTheta: parseFloat(e.target.value) || 0.0 },
+                        allowedDeviationTheta: parseFloat(e.target.value) || 0.0
                       }))}
                       className="form-input"
                     />
@@ -455,9 +455,7 @@ const Nodes = () => {
                     }))}
                     className="form-input"
                   >
-                    <option value="default_map">기본 맵</option>
-                    <option value="warehouse_floor_1">창고 1층</option>
-                    <option value="warehouse_floor_2">창고 2층</option>
+                    <option value="">없음</option>
                   </select>
                 </div>
               </div>
@@ -487,15 +485,10 @@ const Nodes = () => {
                           <select
                               value={action.actionType}
                               onChange={(e) => updateAction(actionIndex, 'actionType', e.target.value)}
-                              className="form-input text-sm py-1"
+                              className="form-input text-base py-4"
                           >
-                              <option value="">선택...</option>
-                              <option value="move">이동</option>
-                              <option value="pick">집기</option>
-                              <option value="place">놓기</option>
-                              <option value="wait">대기</option>
-                              <option value="scan">스캔</option>
-                              <option value="custom">커스텀</option>
+                              <option value="Roboligent Robin - Inference">Roboligent Robin - Inference</option>
+                              <option value="Roboligent Robin - Follow Trajectory">Roboligent Robin - Follow Trajectory</option>
                           </select>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -504,7 +497,7 @@ const Nodes = () => {
                                 type="text"
                                 value={action.actionId}
                                 onChange={(e) => updateAction(actionIndex, 'actionId', e.target.value)}
-                                className="form-input text-sm py-1"
+                                className="form-input text-base py-4"
                                 placeholder="액션 ID"
                             />
                         </div>
@@ -514,7 +507,7 @@ const Nodes = () => {
                               type="text"
                               value={action.actionDescription || ''}
                               onChange={(e) => updateAction(actionIndex, 'actionDescription', e.target.value)}
-                              className="form-input text-sm py-1"
+                              className="form-input text-base py-4"
                               placeholder="액션 설명"
                           />
                         </div>
