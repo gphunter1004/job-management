@@ -18,7 +18,7 @@ export interface NodeTemplate {
   id: number
   nodeId: string
   name: string
-  description: string
+  description?: string
   sequenceId: number
   released: boolean
   x: number
@@ -26,12 +26,11 @@ export interface NodeTemplate {
   theta: number
   allowedDeviationXY: number
   allowedDeviationTheta: number
-  mapId: string
-  actionTemplateIds: string // JSON array
+  mapId?: string
+  actionTemplateIds: string
   createdAt: string
   updatedAt: string
 }
-
 export interface EdgeTemplate {
   id: number
   edgeId: string

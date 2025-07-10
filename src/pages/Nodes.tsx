@@ -401,7 +401,7 @@ const Nodes = () => {
                     value={currentNode.sequenceId}
                     onChange={(e) => setCurrentNode(prev => ({ ...prev, sequenceId: parseInt(e.target.value) || 0 }))}
                     className="form-input"
-                    min="1"
+                    min="0"
                   />
                 </div>
                 <div className="flex items-center space-x-3 mt-6 md:mt-0">
@@ -497,7 +497,8 @@ const Nodes = () => {
                 </div>
                 <div className="mt-4">
                   <label className="form-label">맵 ID</label>
-                  <select
+                  <input
+                    type="text"
                     value={currentNode.position.mapId}
                     onChange={(e) => setCurrentNode(prev => ({ 
                       ...prev, 
@@ -505,9 +506,8 @@ const Nodes = () => {
                       mapId: e.target.value
                     }))}
                     className="form-input"
-                  >
-                    <option value="">없음</option>
-                  </select>
+                    placeholder="맵 ID를 입력하세요"
+                  />
                 </div>
               </div>
 
@@ -640,7 +640,7 @@ const Nodes = () => {
         </Card>
       )}
 
-      {/* 노드 목록 */}
+      {/* 노드 목록 - 수정된 부분 */}
       {(() => {
         const safeNodes = Array.isArray(nodes) ? nodes : [];
         if (isLoading && safeNodes.length === 0) {
@@ -674,6 +674,7 @@ const Nodes = () => {
             {safeNodes.map((node) => {
               // 각 노드 객체도 안전하게 처리
               if (!node || typeof node.id === 'undefined') {
+                console.warn('[Nodes 페이지] 유효하지 않은 노드 객체:', node);
                 return null;
               }
               
@@ -687,13 +688,16 @@ const Nodes = () => {
                   
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>시퀀스: <Badge variant="secondary" size="sm">{node.sequenceId || 0}</Badge></p>
-                    <p>위치: ({(node.x || 0).toFixed(2)}, {(node.y || 0).toFixed(2)}) on {node.mapId || 'N/A'}</p>
+                    <p>위치: ({(node.x || 0).toFixed(2)}, {(node.y || 0).toFixed(2)})</p>
+                    {node.mapId && <p>맵: {node.mapId}</p>}
                     <p>릴리스됨: <Badge variant={node.released ? 'success' : 'warning'} size="sm">
                       {node.released ? '예' : '아니오'}
                     </Badge></p>
                     <p>액션 수: {(() => {
                       try {
-                        return node.actionTemplateIds ? JSON.parse(node.actionTemplateIds).length : 0;
+                        const actionIds = node.actionTemplateIds;
+                        if (!actionIds || actionIds === 'null' || actionIds === '[]') return 0;
+                        return JSON.parse(actionIds).length;
                       } catch {
                         return 0;
                       }

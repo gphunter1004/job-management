@@ -67,7 +67,7 @@ export const nodesApi = {
     return api.post('/nodes', requestData)
   },
 
-  // 노드 목록 조회
+  // 노드 목록 조회 - 수정된 부분
   getNodes: (params?: { 
     limit?: number; 
     offset?: number; 
@@ -79,7 +79,26 @@ export const nodesApi = {
     return api.get(`/nodes${queryString}`)
       .then(response => {
         console.log('[nodesApi.getNodes] API 응답:', response)
-        return response
+        
+        if (response.data && response.data.items) {
+          return {
+            nodes: response.data.items,
+            count: response.data.count || 0
+          }
+        } else if (Array.isArray(response)) {
+          return {
+            nodes: response,
+            count: response.length
+          }
+        } else if (response.nodes) {
+          return response
+        } else {
+          console.warn('[nodesApi.getNodes] 예상치 못한 응답 구조:', response)
+          return {
+            nodes: [],
+            count: 0
+          }
+        }
       })
       .catch(error => {
         console.error('[nodesApi.getNodes] API 오류:', error)
