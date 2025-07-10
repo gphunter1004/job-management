@@ -62,7 +62,7 @@ const CreateNodeModal = ({
   const [currentAction, setCurrentAction] = useState<ActionTemplate>({
     actionType: '',
     actionId: '',
-    blockingType: 'HARD',
+    blockingType: 'NONE',
     actionDescription: '',
     parameters: []
   })
@@ -94,21 +94,21 @@ const CreateNodeModal = ({
     setNodeId('')
     setName('')
     setDescription('')
-    setSequenceId(1)
+    setSequenceId(0)
     setReleased(false)
     setPosition({
-      x: 0,
-      y: 0,
-      theta: 0,
-      allowedDeviationXY: 0.1,
-      allowedDeviationTheta: 0.1,
+      x: 0.0,
+      y: 0.0,
+      theta: 0.0,
+      allowedDeviationXY: 0.0,
+      allowedDeviationTheta: 0.0,
       mapId: 'default_map'
     })
     setActions([])
     setCurrentAction({
       actionType: '',
       actionId: '',
-      blockingType: 'HARD',
+      blockingType: 'NONE',
       actionDescription: '',
       parameters: []
     })
@@ -125,7 +125,7 @@ const CreateNodeModal = ({
       setCurrentAction({
         actionType: '',
         actionId: '',
-        blockingType: 'HARD',
+        blockingType: 'NONE',
         actionDescription: '',
         parameters: []
       })
@@ -378,10 +378,7 @@ const CreateNodeModal = ({
                   onChange={(e) => setPosition({...position, mapId: e.target.value})}
                   className="form-input"
                 >
-                  <option value="default_map">Default Map</option>
-                  <option value="warehouse_floor_1">Warehouse Floor 1</option>
-                  <option value="warehouse_floor_2">Warehouse Floor 2</option>
-                  <option value="production_area">Production Area</option>
+                  <option value="">없음</option>
                 </select>
               </div>
 

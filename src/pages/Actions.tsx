@@ -191,8 +191,6 @@ const Actions = () => {
                     className="form-input"
                     disabled={isEditing}
                   >
-                    <option value="">액션 타입 선택...</option>
-                    {/* value를 화면에 보이는 텍스트와 동일하게 변경합니다. */}
                     <option value="Roboligent Robin - Inference">Roboligent Robin - Inference</option>
                     <option value="Roboligent Robin - Follow Trajectory">Roboligent Robin - Follow Trajectory</option>
                   </select>

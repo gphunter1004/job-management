@@ -11,7 +11,23 @@ import Select from '@/components/ui/Select'
 import { useAppSelector, useAppDispatch } from '@/store'
 import { fetchNodes, createNode, updateNode, deleteNode, fetchNodeById, setSelectedNode } from '@/store/slices/nodeSlice'
 import { NodeTemplate, NodePosition, ActionTemplate } from '@/types/order'
-import { generatePseudoUUID } from '@/utils/idGenerator' 
+import { generatePseudoUUID } from '@/utils/idGenerator'
+
+// CreateNodeRequestFlat 타입 정의 (API 인터페이스에 맞춤)
+interface CreateNodeRequestFlat {
+  nodeId: string
+  name: string
+  description?: string
+  sequenceId: number
+  released: boolean
+  x: number
+  y: number
+  theta: number
+  allowedDeviationXY: number
+  allowedDeviationTheta: number
+  mapId: string
+  actions: ActionTemplate[]
+} 
 
 const Nodes = () => {
   const dispatch = useAppDispatch()
@@ -193,10 +209,11 @@ const Nodes = () => {
   
   // 액션 관리를 위한 헬퍼 함수 (CreateNodeModal에서 가져옴)
   const addAction = () => {
+    const currentActions = Array.isArray(currentNode?.actions) ? currentNode.actions : [];
     setCurrentNode(prev => ({
       ...prev,
       actions: [
-        ...prev.actions,
+        ...currentActions,
         { 
           actionType: '', 
           actionId: '', 
@@ -212,48 +229,82 @@ const Nodes = () => {
   }
 
   const updateAction = (index: number, field: string, value: any) => {
-    const newActions = [...currentNode.actions]
+    const currentActions = Array.isArray(currentNode?.actions) ? [...currentNode.actions] : [];
+    if (!currentActions[index]) return;
+    
     if(field === 'parameters') {
-        newActions[index] = { ...newActions[index], parameters: value }
+        currentActions[index] = { ...currentActions[index], parameters: Array.isArray(value) ? value : [] }
     } else {
-        newActions[index] = { ...newActions[index], [field]: value }
+        currentActions[index] = { ...currentActions[index], [field]: value }
     }
-    setCurrentNode(prev => ({ ...prev, actions: newActions }))
+    setCurrentNode(prev => ({ ...prev, actions: currentActions }))
   }
 
   const removeAction = (index: number) => {
+    const currentActions = Array.isArray(currentNode?.actions) ? currentNode.actions : [];
     setCurrentNode(prev => ({
       ...prev,
-      actions: prev.actions.filter((_, i) => i !== index)
+      actions: currentActions.filter((_, i) => i !== index)
     }))
   }
 
   const addParameter = (actionIndex: number) => {
-    const updatedActions = [...currentNode.actions];
-    updatedActions[actionIndex].parameters = [
-      ...(updatedActions[actionIndex].parameters || []),
-      { 
-        id: Date.now(), 
-        actionTemplateId: updatedActions[actionIndex].id || 0,
-        key: '', 
-        value: '', 
-        valueType: 'string' 
-      }
-    ];
+    const updatedActions = [...(currentNode?.actions || [])];
+    const currentAction = updatedActions[actionIndex];
+    
+    if (!currentAction) return;
+    
+    // 안전하게 parameters 배열 처리
+    const currentParameters = Array.isArray(currentAction.parameters) ? currentAction.parameters : [];
+    
+    updatedActions[actionIndex] = {
+      ...currentAction,
+      parameters: [
+        ...currentParameters,
+        { 
+          id: Date.now(), 
+          actionTemplateId: currentAction.id || 0,
+          key: '', 
+          value: '', 
+          valueType: 'string' 
+        }
+      ]
+    };
     setCurrentNode(prev => ({ ...prev, actions: updatedActions }));
   };
 
   const updateParameter = (actionIndex: number, paramIndex: number, field: string, value: any) => {
-    const updatedActions = [...currentNode.actions];
-    const updatedParams = [...(updatedActions[actionIndex].parameters || [])];
-    updatedParams[paramIndex] = { ...updatedParams[paramIndex], [field]: value };
-    updatedActions[actionIndex].parameters = updatedParams;
-    setCurrentNode(prev => ({ ...prev, actions: updatedActions }));
+    const updatedActions = [...(currentNode?.actions || [])];
+    const currentAction = updatedActions[actionIndex];
+    
+    if (!currentAction) return;
+    
+    // 안전하게 parameters 배열 처리
+    const currentParameters = Array.isArray(currentAction.parameters) ? [...currentAction.parameters] : [];
+    
+    if (currentParameters[paramIndex]) {
+      currentParameters[paramIndex] = { ...currentParameters[paramIndex], [field]: value };
+      updatedActions[actionIndex] = {
+        ...currentAction,
+        parameters: currentParameters
+      };
+      setCurrentNode(prev => ({ ...prev, actions: updatedActions }));
+    }
   };
 
   const removeParameter = (actionIndex: number, paramIndex: number) => {
-    const updatedActions = [...currentNode.actions];
-    updatedActions[actionIndex].parameters = (updatedActions[actionIndex].parameters || []).filter((_, i) => i !== paramIndex);
+    const updatedActions = [...(currentNode?.actions || [])];
+    const currentAction = updatedActions[actionIndex];
+    
+    if (!currentAction) return;
+    
+    // 안전하게 parameters 배열 처리
+    const currentParameters = Array.isArray(currentAction.parameters) ? currentAction.parameters : [];
+    
+    updatedActions[actionIndex] = {
+      ...currentAction,
+      parameters: currentParameters.filter((_, i) => i !== paramIndex)
+    };
     setCurrentNode(prev => ({ ...prev, actions: updatedActions }));
   };
 
@@ -473,10 +524,12 @@ const Nodes = () => {
                     액션 추가
                   </Button>
                 </div>
-                {currentNode.actions.length === 0 && (
-                  <p className="text-sm text-gray-500">이 노드에 대한 액션이 없습니다.</p>
-                )}
-                {currentNode.actions.map((action, actionIndex) => (
+                {(() => {
+                  const currentActions = Array.isArray(currentNode?.actions) ? currentNode.actions : [];
+                  if (currentActions.length === 0) {
+                    return <p className="text-sm text-gray-500">이 노드에 대한 액션이 없습니다.</p>;
+                  }
+                  return currentActions.map((action, actionIndex) => (
                   <Card key={actionIndex} className="p-4 mb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-2">
@@ -522,22 +575,24 @@ const Nodes = () => {
                               매개변수 추가
                           </Button>
                         </div>
-                        {/* 매개변수 목록 */}
-                        {(action.parameters || []).length === 0 && (
-                            <p className="text-xs text-gray-500 ml-4">매개변수 없음</p>
-                        )}
-                        {(action.parameters || []).map((param, paramIndex) => (
+                        {/* 매개변수 목록 - 안전하게 처리 */}
+                        {(() => {
+                          const parameters = action?.parameters || [];
+                          if (!Array.isArray(parameters) || parameters.length === 0) {
+                            return <p className="text-xs text-gray-500 ml-4">매개변수 없음</p>;
+                          }
+                          return parameters.map((param, paramIndex) => (
                             <div key={paramIndex} className="grid grid-cols-12 gap-2 mb-1 items-center ml-4">
                                 <input
                                     type="text"
-                                    value={param.key}
+                                    value={param?.key || ''}
                                     onChange={(e) => updateParameter(actionIndex, paramIndex, 'key', e.target.value)}
                                     className="form-input col-span-4 text-xs py-1"
                                     placeholder="키"
                                 />
                                 <input
                                     type="text"
-                                    value={param.value}
+                                    value={param?.value || ''}
                                     onChange={(e) => updateParameter(actionIndex, paramIndex, 'value', e.target.value)}
                                     className="form-input col-span-5 text-xs py-1"
                                     placeholder="값"
@@ -551,7 +606,8 @@ const Nodes = () => {
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
                             </div>
-                        ))}
+                          ));
+                        })()}
                       </div>
                       <Button
                         variant="ghost"
@@ -563,7 +619,8 @@ const Nodes = () => {
                       </Button>
                     </div>
                   </Card>
-                ))}
+                  ));
+                })()}
               </div>
 
               <div className="flex justify-end space-x-3 mt-6">
@@ -584,74 +641,104 @@ const Nodes = () => {
       )}
 
       {/* 노드 목록 */}
-      {isLoading && nodes.length === 0 ? (
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" text="노드 목록을 불러오는 중..." />
-        </div>
-      ) : nodes.length === 0 ? (
-        <Card className="p-12 text-center">
-          <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 노드 없음</h3>
-          <p className="text-gray-500 mb-6">
-            새로운 노드를 생성하여 목록에 추가하세요.
-          </p>
-          <Button 
-            variant="primary"
-            onClick={() => { resetForm(); setShowNodeForm(true) }}
-          >
-            첫 노드 생성
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {nodes.map((node) => (
-            <Card key={node.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <Badge variant="primary">{node.name}</Badge>
-                <span className="text-sm text-gray-500">ID: {node.nodeId}</span>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{node.description || '설명 없음'}</h3>
-              
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>시퀀스: <Badge variant="secondary" size="sm">{node.sequenceId}</Badge></p>
-                <p>위치: ({node.x.toFixed(2)}, {node.y.toFixed(2)}) on {node.mapId}</p>
-                <p>릴리스됨: <Badge variant={node.released ? 'success' : 'warning'} size="sm">
-                  {node.released ? '예' : '아니오'}
-                </Badge></p>
-                <p>액션 수: {node.actionTemplateIds ? JSON.parse(node.actionTemplateIds).length : 0}</p>
-              </div>
-
-              <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-200">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  leftIcon={<Edit className="w-3 h-3" />}
-                  onClick={() => handleEditNode(node)}
-                  disabled={isLoading}
-                >
-                  편집
-                </Button>
-                <Button 
-                  variant="error" 
-                  size="sm" 
-                  leftIcon={<Trash2 className="w-3 h-3" />} 
-                  onClick={() => handleDeleteNode(node.id)}
-                  disabled={isLoading}
-                >
-                  삭제
-                </Button>
-              </div>
+      {(() => {
+        const safeNodes = Array.isArray(nodes) ? nodes : [];
+        if (isLoading && safeNodes.length === 0) {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <LoadingSpinner size="lg" text="노드 목록을 불러오는 중..." />
+            </div>
+          );
+        }
+        
+        if (safeNodes.length === 0) {
+          return (
+            <Card className="p-12 text-center">
+              <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 노드 없음</h3>
+              <p className="text-gray-500 mb-6">
+                새로운 노드를 생성하여 목록에 추가하세요.
+              </p>
+              <Button 
+                variant="primary"
+                onClick={() => { resetForm(); setShowNodeForm(true) }}
+              >
+                첫 노드 생성
+              </Button>
             </Card>
-          ))}
-        </div>
-      )}
+          );
+        }
+        
+        return (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {safeNodes.map((node) => {
+              // 각 노드 객체도 안전하게 처리
+              if (!node || typeof node.id === 'undefined') {
+                return null;
+              }
+              
+              return (
+                <Card key={node.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="primary">{node.name || '이름 없음'}</Badge>
+                    <span className="text-sm text-gray-500">ID: {node.nodeId || 'N/A'}</span>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{node.description || '설명 없음'}</h3>
+                  
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>시퀀스: <Badge variant="secondary" size="sm">{node.sequenceId || 0}</Badge></p>
+                    <p>위치: ({(node.x || 0).toFixed(2)}, {(node.y || 0).toFixed(2)}) on {node.mapId || 'N/A'}</p>
+                    <p>릴리스됨: <Badge variant={node.released ? 'success' : 'warning'} size="sm">
+                      {node.released ? '예' : '아니오'}
+                    </Badge></p>
+                    <p>액션 수: {(() => {
+                      try {
+                        return node.actionTemplateIds ? JSON.parse(node.actionTemplateIds).length : 0;
+                      } catch {
+                        return 0;
+                      }
+                    })()}</p>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-200">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      leftIcon={<Edit className="w-3 h-3" />}
+                      onClick={() => handleEditNode(node)}
+                      disabled={isLoading}
+                    >
+                      편집
+                    </Button>
+                    <Button 
+                      variant="error" 
+                      size="sm" 
+                      leftIcon={<Trash2 className="w-3 h-3" />} 
+                      onClick={() => handleDeleteNode(node.id)}
+                      disabled={isLoading}
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                </Card>
+              );
+            }).filter(Boolean)}
+          </div>
+        );
+      })()}
 
       {/* 결과 수 표시 */}
-      {nodes.length > 0 && (
-        <div className="text-center text-sm text-gray-500">
-          총 {nodes.length}개의 노드
-        </div>
-      )}
+      {(() => {
+        const safeNodes = Array.isArray(nodes) ? nodes : [];
+        if (safeNodes.length > 0) {
+          return (
+            <div className="text-center text-sm text-gray-500">
+              총 {safeNodes.length}개의 노드
+            </div>
+          );
+        }
+        return null;
+      })()}
     </div>
   )
 }
